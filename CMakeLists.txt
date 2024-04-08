@@ -7,6 +7,7 @@ add_executable(BackPropagation
         main.cu
         Matrix.cpp
         Matrix.h
+        RandomDouble.h
 )
 
 set_target_properties(BackPropagation PROPERTIES
