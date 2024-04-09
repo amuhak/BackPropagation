@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CUDA_COMPILER "nvcc")
 
 project(BackPropagation CUDA)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G -lineinfo")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g3 -Wall -fanalyzer -fsanitize=address,undefined,leak")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O2 ") # -g -G -lineinfo
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -Wall")
 set(CMAKE_CUDA_STANDARD 17)
 
 add_executable(BackPropagation

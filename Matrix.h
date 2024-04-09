@@ -6,7 +6,7 @@
 #include <iostream>
 #include "RandomT.h"
 
-const int MULTIPLICATION_PER_THREAD = 100000;
+const int MULTIPLICATION_PER_THREAD = 500000;
 
 template<typename T>
 class Matrix {
