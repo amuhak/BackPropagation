@@ -1,5 +1,5 @@
 //
-// Shamelessly copied from https://github.com/mtrebi/thread-pool
+// Shamelessly copied from https://stackoverflow.com/questions/15752659/thread-pooling-in-c11
 // May or may not have been modified
 //
 
@@ -14,96 +14,81 @@
 #include <utility>
 #include <vector>
 
-#include "SafeQueue.h"
-
 class ThreadPool {
-private:
-    class ThreadWorker {
-    private:
-        int m_id;
-        ThreadPool *m_pool;
-    public:
-        ThreadWorker(ThreadPool *pool, const int id)
-                : m_pool(pool), m_id(id) {
-        }
-
-        void operator()() {
-            std::function<void()> func;
-            bool dequeued;
-            while (!m_pool->m_shutdown) {
-                {
-                    std::unique_lock<std::mutex> lock(m_pool->m_conditional_mutex);
-                    if (m_pool->m_queue.empty()) {
-                        m_pool->m_conditional_lock.wait(lock);
-                    }
-                    dequeued = m_pool->m_queue.dequeue(func);
-                }
-                if (dequeued) {
-                    func();
-                }
-            }
-        }
-    };
-
-    bool m_shutdown;
-    SafeQueue<std::function<void()>> m_queue;
-    std::vector<std::thread> m_threads;
-    std::mutex m_conditional_mutex;
-    std::condition_variable m_conditional_lock;
 public:
-    ThreadPool(const int n_threads)
-            : m_threads(std::vector<std::thread>(n_threads)), m_shutdown(false) {
-    }
+    void Start();
 
-    ThreadPool(const ThreadPool &) = delete;
+    void QueueJob(const std::function<void()> &job);
 
-    ThreadPool(ThreadPool &&) = delete;
+    void Stop();
 
-    ThreadPool &operator=(const ThreadPool &) = delete;
+    bool busy();
 
-    ThreadPool &operator=(ThreadPool &&) = delete;
+private:
+    void ThreadLoop();
 
-    // Inits thread pool
-    void init() {
-        for (int i = 0; i < m_threads.size(); ++i) {
-            m_threads[i] = std::thread(ThreadWorker(this, i));
-        }
-    }
-
-    // Waits until threads finish their current task and shutdowns the pool
-    void shutdown() {
-        m_shutdown = true;
-        m_conditional_lock.notify_all();
-
-        for (int i = 0; i < m_threads.size(); ++i) {
-            if (m_threads[i].joinable()) {
-                m_threads[i].join();
-            }
-        }
-    }
-
-    // Submit a function to be executed asynchronously by the pool
-    template<typename F, typename...Args>
-    auto submit(F &&f, Args &&... args) -> std::future<decltype(f(args...))> {
-        // Create a function with bounded parameters ready to execute
-        std::function<decltype(f(args...))()> func = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-        // Encapsulate it into a shared ptr in order to be able to copy construct / assign
-        auto task_ptr = std::make_shared<std::packaged_task<decltype(f(args...))()>>(func);
-
-        // Wrap packaged task into void function
-        std::function<void()> wrapper_func = [task_ptr]() {
-            (*task_ptr)();
-        };
-
-        // Enqueue generic wrapper function
-        m_queue.enqueue(wrapper_func);
-
-        // Wake up one thread if its waiting
-        m_conditional_lock.notify_one();
-
-        // Return future from promise
-        return task_ptr->get_future();
-    }
+    bool should_terminate = false;           // Tells threads to stop looking for jobs
+    std::mutex queue_mutex;                  // Prevents data races to the job queue
+    std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination
+    std::vector<std::thread> threads;
+    std::queue<std::function<void()>> jobs;
 };
+
+void ThreadPool::Start() {
+    const uint32_t num_threads = std::thread::hardware_concurrency(); // Max # of threads the system supports
+    for (uint32_t ii = 0; ii < num_threads; ++ii) {
+        threads.emplace_back(&ThreadPool::ThreadLoop, this);
+    }
+}
+
+void ThreadPool::ThreadLoop() {
+    while (true) {
+        std::function<void()> job;
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            mutex_condition.wait(lock, [this] {
+                return !jobs.empty() || should_terminate;
+            });
+            if (should_terminate) {
+                return;
+            }
+            job = jobs.front();
+            jobs.pop();
+        }
+        job();
+    }
+}
+
+void ThreadPool::QueueJob(const std::function<void()> &job) {
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        jobs.push(job);
+    }
+    mutex_condition.notify_one();
+}
+
+bool ThreadPool::busy() {
+    bool poolbusy;
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        poolbusy = !jobs.empty();
+    }
+    return poolbusy;
+}
+
+void ThreadPool::Stop() {
+    while (busy()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        should_terminate = true;
+    }
+    mutex_condition.notify_all();
+    for (std::thread &active_thread: threads) {
+        active_thread.join();
+    }
+    threads.clear();
+}
 
 #endif //BACKPROPAGATION_THREADPOOL_H

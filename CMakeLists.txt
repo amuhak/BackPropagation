@@ -13,7 +13,6 @@ add_executable(BackPropagation
         Matrix.h
         RandomT.h
         ThreadPool.h
-        SafeQueue.h
         matmulBenchmark.h
 )
 

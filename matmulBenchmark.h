@@ -16,7 +16,7 @@ void matmulBenchmark(Matrix<T> &A, Matrix<T> &B, F &func) {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         time += elapsed.count();
-        std::cout << "Elapsed time: " << elapsed.count() << "s\n";
+        // std::cout << "Elapsed time: " << elapsed.count() << "s\n";
     }
     std::cout << "Average time: " << time / 10 << "s\n";
 }

@@ -6,8 +6,7 @@
 #include <iostream>
 #include "RandomT.h"
 
-const int MULTIPLICATION_PER_THREAD = 1000;
-const int THREADS = 30;
+const int MULTIPLICATION_PER_THREAD = 100000;
 
 template<typename T>
 class Matrix {
@@ -111,11 +110,7 @@ auto matrix_multiply(const Matrix<T> &a, const Matrix<U> &b) {
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");
     }
     Matrix<T> result(a.rows, b.cols);
-    for (int i = 0; i < a.rows; i++) {
-        for (int j = 0; j < b.cols; j++) {
-            result.data[i * result.cols + j] = matrix_multiply_internal(&a, &b, i, j);
-        }
-    }
+    matrix_multiply_solve_for_range_internal(&a, &b, &result, 0, result.length - 1);
     return result;
 }
 
@@ -128,10 +123,10 @@ matrix_multiply_solve_for_range_internal(const Matrix<T> *a,
                                          long long end) {
     long long xStart = start / b->cols;
     long long yStart = start % b->cols;
-    long long xEnd = end / b->cols;
-    long long yEnd = end % b->cols;
-    for (long long i = xStart; i < xEnd; i++) {
-        for (long long j = yStart; j < yEnd; j++) {
+    long long xEnd = (end) / b->cols;
+    long long yEnd = (end) % b->cols;
+    for (long long i = xStart; i <= xEnd; i++) {
+        for (long long j = yStart; j <= yEnd; j++) {
             result->data[i * result->cols + j] = matrix_multiply_internal(a, b, i, j);
         }
     }
@@ -147,17 +142,22 @@ auto matrix_multiply_parallel(const Matrix<T> &a, const Matrix<U> &b) {
     Matrix<T> result(a.rows, b.cols);
     long long multiplicationPerSolution = a.rows;
     long long noOfSolutionsPerThread = MULTIPLICATION_PER_THREAD / multiplicationPerSolution;
+    noOfSolutionsPerThread = std::max(noOfSolutionsPerThread, 1LL);
     const long long n = result.length - 1;
-    ThreadPool pool(THREADS);
-    pool.init();
+    ThreadPool pool;
+    pool.Start();
     auto *aPtr = &a;
     auto *bPtr = &b;
     auto *resultPtr = &result;
     for (long long i = 0; i <= n; i += noOfSolutionsPerThread) {
-        pool.submit(matrix_multiply_solve_for_range_internal<T, U, T>, aPtr, bPtr, resultPtr, i,
-                    std::min(i + noOfSolutionsPerThread, n));
+        pool.QueueJob(
+                [noOfSolutionsPerThread, i, aPtr, bPtr, resultPtr, n] {
+                    matrix_multiply_solve_for_range_internal<T, U, T>(aPtr, bPtr, resultPtr, i,
+                                                                      std::min(i + noOfSolutionsPerThread - 1, n));
+                }
+        );
     }
-    pool.shutdown();
+    pool.Stop();
     return result;
 }
 
