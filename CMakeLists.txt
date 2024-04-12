@@ -1,10 +1,24 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(CMAKE_CUDA_COMPILER "nvcc")
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
 
 project(BackPropagation CUDA)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O2 ") # -g -G -lineinfo
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -Wall")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(DEBUG_MODE ON)
+    message(STATUS "Debug mode")
+else ()
+    set(DEBUG_MODE OFF)
+    message(STATUS "Release mode")
+endif ()
+
+if (DEBUG_MODE)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O0 -g -G -lineinfo")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -Wall -g")
+else ()
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall")
+endif ()
+
 set(CMAKE_CUDA_STANDARD 17)
 
 add_executable(BackPropagation
@@ -15,6 +29,8 @@ add_executable(BackPropagation
         ThreadPool.h
         matmulBenchmark.h
 )
-
-set_target_properties(BackPropagation PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(BackPropagation PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+if (DEBUG_MODE)
+    find_package(GSL REQUIRED)
+    target_link_libraries(BackPropagation GSL::gsl GSL::gslcblas)
+endif ()
