@@ -1,22 +1,9 @@
-#include <iostream>
-#include <chrono>
 #include "ThreadPool.h"
 #include "matmulBenchmark.h"
+#include "tests/matmul_unit_test.cpp"
 
 
-int main(int argc, char *argv[]) {
-    const int n = 2000;
-    Matrix<int> a(n, n);
-    Matrix<int> b(n, n);
-    a.fillRandom();
-    b.fillRandom();
-    auto c = matrix_multiply(a, b);
-    std::cout << "not parallel" << std::endl;
-    matmulBenchmark(a, b, matrix_multiply<int, int>);
-    std::cout << "parallel" << std::endl;
-    matmulBenchmark(a, b, matrix_multiply_parallel < int, int > );
-    auto d = matrix_multiply_parallel(a, b);
-    std::cout << std::boolalpha;
-    std::cout << "c == d: " << (c == d) << std::endl;
+int main() {
+    matmul_unit_test();
     return 0;
 }
