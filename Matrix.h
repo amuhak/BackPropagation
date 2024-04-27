@@ -4,8 +4,14 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <thread>
+
+#ifdef DEBUG_MODE
 #include <gsl/gsl_matrix.h>
+#endif
+
 #include "RandomT.h"
+#include "ThreadPool.h"
 
 const int CONCURRENCY_LIMIT = (int) std::thread::hardware_concurrency();
 
@@ -79,7 +85,7 @@ public:
         return true;
     }
 
-    #ifdef DEBUG_MODE
+#ifdef DEBUG_MODE
     bool operator==(const gsl_matrix &other) const {
         for (int i = 0; i < length; i++) {
             if (data[i] != other.data[i]) {
@@ -90,7 +96,7 @@ public:
         }
         return true;
     }
-    #endif
+#endif
 
     void fillRandom() {
         RandomT<T> rand;
