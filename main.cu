@@ -5,18 +5,20 @@
 #include "Matrix.h"
 #include <cstdio>
 
+#define TYPE int
+
 int main() {
-    int n = 1000;
-    auto *aData = new float[n * n];
-    auto *bData = new float[n * n];
-    RandomT<float> rand;
+    int n = 1024;
+    auto *aData = new TYPE[n * n];
+    auto *bData = new TYPE[n * n];
+    RandomT<TYPE> rand;
     for (int i = 0; i < n * n; i++) {
         aData[i] = rand.generate();
         bData[i] = rand.generate();
     }
-    Matrix<float> a(n, n);
+    Matrix<TYPE> a(n, n);
     a.set(aData);
-    Matrix<float> b(n, n);
+    Matrix<TYPE> b(n, n);
     b.set(bData);
     /*auto start = std::chrono::high_resolution_clock::now();
     auto ans = matrix_multiply(a, b);
@@ -27,17 +29,17 @@ int main() {
     auto end = std::chrono::high_resolution_clock::now();
     auto cpuTimeParallel = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "CPU\n";
-    // ans.prfloat();
-    Matrix_cu<float> a_cu(n, n);
+    // ans.prTYPE();
+    Matrix_cu<TYPE> a_cu(n, n);
     a_cu.set(aData);
-    Matrix_cu<float> b_cu(n, n);
+    Matrix_cu<TYPE> b_cu(n, n);
     b_cu.set(bData);
     std::cout << "CUDA\n";
     start = std::chrono::high_resolution_clock::now();
     auto ans_cu = matrix_multiply(a_cu, b_cu);
     end = std::chrono::high_resolution_clock::now();
     auto gpuTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    // ans_cu.prfloat();
+    // ans_cu.prTYPE();
     std::cout << "size: " << n << "x" << n << std::endl;
     std::cout << std::boolalpha << "ans_cu == ans: " << (ans_cu == ans) << std::endl;
     // std::cout << "CPU Time: " << cpuTime << "ms\n";

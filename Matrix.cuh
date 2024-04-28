@@ -1,6 +1,7 @@
 // Matrix.h
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
+#define SHIFT_SIZE 1024
 
 #include <stdexcept>
 #include <iostream>
@@ -80,7 +81,7 @@ public:
         if (rowsCPU != other.rows || colsCPU != other.cols) {
             return false;
         }
-        T* dataCPU = new T[lengthCPU];
+        T *dataCPU = new T[lengthCPU];
         cudaMemcpy(dataCPU, data, lengthCPU * sizeof(T), cudaMemcpyDeviceToHost);
         for (int i = 0; i < lengthCPU; i++) {
             if (dataCPU[i] != other.data[i]) {
@@ -142,7 +143,7 @@ template<typename T, typename U, typename V>
 __global__
 void
 matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols) {
-    auto ans = 0; // Auto doesn't work here for some reason
+    decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
     auto x = blockIdx.x;
     auto y = threadIdx.x;
     // printf("data: %d\n x: %d, y: %d\n", b[x * 3 + y], x, y);
