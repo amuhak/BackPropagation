@@ -146,10 +146,11 @@ public:
 template<typename T, typename U, typename V>
 __global__
 void
-matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols) {
+matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols, uint shiftDown = 0,
+                            uint shiftRight = 0) {
     decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
-    auto x = blockIdx.x;
-    auto y = threadIdx.x;
+    auto x = blockIdx.x + shiftDown;
+    auto y = threadIdx.x + shiftRight;
     // printf("data: %d\n x: %d, y: %d\n", b[x * 3 + y], x, y);
     for (long i = 0; i < aCols; i++) {
         ans += a[x * aCols + i] * b[i * bCols + y];
