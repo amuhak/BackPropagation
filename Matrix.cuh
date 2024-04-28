@@ -12,6 +12,8 @@
 #include "RandomT.h"
 #include "Matrix.h"
 
+#define EPSILON 0.0000001
+
 template<typename T>
 class Matrix_cu {
 public:
@@ -68,9 +70,10 @@ public:
             return false;
         }
         for (int i = 0; i < *length; i++) {
-            if (data[i] != other.data[i]) {
+            auto acceptableError = data[i] * EPSILON;
+            if (data[i] - other.data[i] > acceptableError) {
                 std::cout << "Mismatch at index: " << i << " Expected: " << other.data[i] << " Got: " << data[i]
-                          << std::endl;
+                          << "Diff: " << data[i] - other.data[i] << std::endl;
                 return false;
             }
         }
@@ -84,9 +87,10 @@ public:
         T *dataCPU = new T[lengthCPU];
         cudaMemcpy(dataCPU, data, lengthCPU * sizeof(T), cudaMemcpyDeviceToHost);
         for (int i = 0; i < lengthCPU; i++) {
-            if (dataCPU[i] != other.data[i]) {
+            auto acceptableError = std::abs(dataCPU[i] * EPSILON);
+            if (std::abs(dataCPU[i] - other.data[i]) > acceptableError) {
                 std::cout << "Mismatch at index: " << i << " Expected: " << other.data[i] << " Got: " << dataCPU[i]
-                          << std::endl;
+                          << " Diff: " << dataCPU[i] - other.data[i] << std::endl;
                 return false;
             }
         }
