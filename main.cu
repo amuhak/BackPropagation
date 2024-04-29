@@ -21,10 +21,12 @@ int main() {
     warm_up_gpu<<<1, 1024>>>();
     cudaDeviceSynchronize();
     std::cout << "Warm up done\n";
+    /*
     std::cout << "TYPE: double\n";
     main1<double>();
     std::cout << "TYPE: float\n";
     main1<float>();
+    */
     std::cout << "TYPE: int\n";
     main1<int>();
     return 0;
@@ -32,8 +34,8 @@ int main() {
 
 template<typename T>
 void main1() {
-    int x = 1024;
-    int y = 100;
+    int x = 1 << 10;
+    int y = 1 << 10;
     auto *aData = new T[x * y];
     auto *bData = new T[x * y];
     RandomT<T> rand;

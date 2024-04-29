@@ -1,7 +1,6 @@
 // Matrix.h
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
-#define SHIFT_SIZE 1024
 
 #include <stdexcept>
 #include <iostream>
@@ -12,7 +11,8 @@
 #include "RandomT.h"
 #include "Matrix.h"
 
-#define EPSILON 0.0000001
+#define EPSILON 0.00001
+#define SHIFT_SIZE 1024
 
 template<typename T>
 class Matrix_cu {
@@ -142,6 +142,14 @@ public:
     }
 };
 
+template<typename T, typename U>
+auto matrix_multiply_internal_TEST(const Matrix<T> *a, const Matrix<U> *b, long x, long y) {
+    decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
+    for (int i = 0; i < a->cols; i++) {
+        ans += a->data[x * a->cols + i] * b->data[i * b->cols + y];
+    }
+    return ans;
+}
 
 template<typename T, typename U, typename V>
 __global__
@@ -149,9 +157,10 @@ void
 matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols, uint shiftDown = 0,
                             uint shiftRight = 0) {
     decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
+    shiftDown *= SHIFT_SIZE;
+    shiftRight *= SHIFT_SIZE;
     auto x = blockIdx.x + shiftDown;
     auto y = threadIdx.x + shiftRight;
-    // printf("data: %d\n x: %d, y: %d\n", b[x * 3 + y], x, y);
     for (long i = 0; i < aCols; i++) {
         ans += a[x * aCols + i] * b[i * bCols + y];
     }
@@ -160,7 +169,7 @@ matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols
 
 template<typename T, typename U>
 auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
-    if (a.colsCPU != b.rowsCPU || a.rowsCPU != b.colsCPU) {
+    if (a.colsCPU != b.rowsCPU) {
         std::cout << "Matrix dimensions do not match." +
                      std::to_string(a.rowsCPU) + "x" + std::to_string(a.colsCPU) + " and " +
                      std::to_string(b.rowsCPU) + "x" + std::to_string(b.colsCPU) + " respectively.";
@@ -168,12 +177,21 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     }
     Matrix_cu<T> result(a.rowsCPU, b.colsCPU);
     result.fill0();
-    matrix_multiply_internal_cu<<<a.rowsCPU, b.colsCPU>>>(
-            a.data, a.colsCPU,
-            b.data, b.colsCPU,
-            result.data, result.colsCPU);
-    cudaDeviceSynchronize();
-
+    const int shiftDown = a.rowsCPU / (SHIFT_SIZE + 1);
+    const int shiftRight = b.colsCPU / (SHIFT_SIZE + 1);
+    for (int i = 0; i <= shiftDown; i++) {
+        for (int j = 0; j <= shiftRight; j++) {
+            int blockSize = min(SHIFT_SIZE, a.rowsCPU - i * SHIFT_SIZE);
+            int noOfThreads = min(SHIFT_SIZE, b.colsCPU - j * SHIFT_SIZE);
+            noOfThreads = max(1, noOfThreads);
+            matrix_multiply_internal_cu<<<blockSize, noOfThreads>>>(
+                    a.data, a.colsCPU,
+                    b.data, b.colsCPU,
+                    result.data, result.colsCPU,
+                    i, j);
+            cudaDeviceSynchronize();
+        }
+    }
     return result;
 }
 
