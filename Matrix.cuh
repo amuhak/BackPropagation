@@ -43,7 +43,10 @@ public:
         cudaMalloc(&data, lengthCPU * sizeof(T));
     }
 
-
+    /**
+     * Fill the matrix with a value
+     * @param value
+     */
     void fill(T value) {
         T *temp = new T[lengthCPU];
         for (int i = 0; i < lengthCPU; i++) {
@@ -61,8 +64,16 @@ public:
         fill(0);
     }
 
-    auto operator[](long index) {
-        return (data + (index * *cols));
+    /**
+     * Warning: This changes the data in the returned pointer will not be reflected in the matrix.
+     * Changes to the matrix will not be reflected in the pointer either.
+     * @param index
+     * @return A shared pointer to the data at the index
+     */
+    std::shared_ptr<T[]> operator[](long index) {
+        std::shared_ptr<T[]> temp(new T[colsCPU], std::default_delete<T[]>());
+        cudaMemcpy(temp.get(), data + (index * colsCPU), colsCPU * sizeof(T), cudaMemcpyDeviceToHost);
+        return temp;
     }
 
     bool operator==(const Matrix_cu<T> &other) const {

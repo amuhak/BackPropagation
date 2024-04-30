@@ -21,15 +21,20 @@ int main() {
     warm_up_gpu<<<1, 1024>>>();
     cudaDeviceSynchronize();
     std::cout << "Warm up done\n";
-    /*
+    Matrix_cu<float> a(2,2);
+    auto *data = new float[4]{1, 2, 3, 4};
+    a.set(data);
+    std::cout << a[0][0] << " " << a[0][3] << std::endl;
+    return 0;
+}
+void test(){
+
     std::cout << "TYPE: double\n";
     main1<double>();
     std::cout << "TYPE: float\n";
     main1<float>();
-    */
     std::cout << "TYPE: int\n";
     main1<int>();
-    return 0;
 }
 
 template<typename T>
