@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.22)
-option(GPU "enable gpu support" "OFF")
+option(GPU "Enables gpu support" "OFF")
+option(TESTING "Switch to testing builds" "OFF")
+
+set(TESTING "ON")
+
 message(STATUS "GPU is ${GPU}")
+message(STATUS "Testing is ${TESTING}")
+
+if (TESTING STREQUAL "ON")
+    message(STATUS "Testing enabled")
+    add_compile_definitions(TESTING)
+endif ()
 
 if (GPU STREQUAL "ON")
     find_program(CMAKE_CUDA_COMPILER nvcc)
@@ -57,6 +67,8 @@ if (GPU STREQUAL "ON")
             matmulBenchmark.h
             tests/matmul_unit_test.cpp
             Matrix.cuh
+            tests/matmul_unit_test.cu
+            tests/matmul_unit_test.cuh
     )
 else ()
     add_executable(BackPropagation
