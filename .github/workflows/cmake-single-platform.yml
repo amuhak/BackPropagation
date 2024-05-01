@@ -30,7 +30,9 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release
-
+    - name : Ls
+      run: ls
+      
     - name: Test
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
