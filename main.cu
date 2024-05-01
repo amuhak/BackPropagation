@@ -6,7 +6,11 @@
 
 int main() {
     std::cout << std::boolalpha;
-    std::cout << matmul_unit_test();
+    bool test;
+    std::cout << (test = matmul_unit_test());
+    if (!test) {
+        return 69;
+    }
 }
 
 #else
