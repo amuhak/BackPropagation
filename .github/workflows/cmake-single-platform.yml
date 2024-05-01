@@ -4,10 +4,7 @@ name: CMake on a single platform
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -68,9 +65,23 @@ jobs:
       run: ctest -C Debug
 
     - name: Make GitHub release
-      uses: softprops/action-gh-release@v2
-      with:
-        prerelease: true
-        files: |
-          ${{ runner.workspace }}/output/Debug_CPU_Build_Linux_x64
-          ${{ runner.workspace }}/output/Release_CPU_Build_Linux_x64
+      run: |
+        export TAG="0.0.0"
+        export DESCRIPTION="discription"
+        
+        echo "Checking if release exists and deleting..."
+        
+        if $(gh release list | grep -q -e "${TAG}"); then
+          gh release delete "${TAG}" -y --cleanup-tag
+        fi
+
+        echo "Creating release..."
+        gh release create "${TAG}" \
+          --prerelease \
+          --title "${TAG}" \
+          --notes "${DESCRIPTION}" \
+          --target "${GITHUB_HEAD_REF}"
+
+        
+
+
