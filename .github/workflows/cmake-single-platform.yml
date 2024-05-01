@@ -38,7 +38,7 @@ jobs:
     - name : Move and Rename
       run: | 
         mkdir output
-        mv ./build/BackPropagation ./output/Debug_CPU_Build_Linux_x64
+        cp ./build/BackPropagation ./output/Debug_CPU_Build_Linux_x64
       
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -56,7 +56,7 @@ jobs:
       
     - name : Move and Rename again
       run: | 
-        mv ./build/BackPropagation ./output/Release_CPU_Build_Linux_x64
+        cp ./build/BackPropagation ./output/Release_CPU_Build_Linux_x64
       
     - name: Test Again
       working-directory: ${{github.workspace}}/build
