@@ -28,7 +28,7 @@ For example, my nvcc is located at `/usr/local/cuda/bin/nvcc`.
 So if I want a build with the GPU without optimizations (debug mode), I would run:
 
 ```bash
-cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=Debug -DGPU=ON -DTESTING=OFF -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
+cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=Debug -DGPU=ON -DTESTING=OFF 
 cmake --build . --target BackPropagation --config Debug
 ```
 
