@@ -92,3 +92,7 @@ if (DEBUG_MODE)
     find_package(GSL REQUIRED)
     target_link_libraries(BackPropagation GSL::gsl GSL::gslcblas)
 endif ()
+
+enable_testing()
+
+add_test(NAME matmul_unit_test COMMAND BackPropagation)
