@@ -26,7 +26,7 @@ public:
 
     void QueueJob(const std::function<void()> &job) {
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::unique_lock<std::mutex> const lock(queue_mutex);
             jobs.push(job);
         }
         mutex_condition.notify_one();
@@ -37,7 +37,7 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::unique_lock<std::mutex> const lock(queue_mutex);
             should_terminate = true;
         }
         mutex_condition.notify_all();

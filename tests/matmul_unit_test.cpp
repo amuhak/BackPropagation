@@ -42,15 +42,15 @@ bool matmul_unit_test() {
         b[i] = r.generate();
     }
 
-    Matrix<double> m1(n, n, a);
-    Matrix<double> m2(n, n, b);
+    Matrix<double> const m1(n, n, a);
+    Matrix<double> const m2(n, n, b);
 
     auto ans = matrix_multiply(m1, m2);
     auto ans_parallel = matrix_multiply_parallel(m1, m2);
 
 #ifdef DEBUG
-    gsl_matrix_view A = gsl_matrix_view_array(a, n, n);
-    gsl_matrix_view B = gsl_matrix_view_array(b, n, n);
+    gsl_matrix_view const A = gsl_matrix_view_array(a, n, n);
+    gsl_matrix_view const B = gsl_matrix_view_array(b, n, n);
     gsl_matrix_view C = gsl_matrix_view_array(c, n, n);
     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans,
                    1.0, &A.matrix, &B.matrix,
@@ -66,7 +66,7 @@ bool matmul_unit_test() {
               << std::endl;
 
 #if DEBUG
-    bool temp = eq(c, ans.data, n * n);
+    bool const temp = eq(c, ans.data, n * n);
     std::cout << "Matrix multiplication single threaded == GSL matrix multiplication       " << temp << std::endl;
     correct &= temp;
 #endif
