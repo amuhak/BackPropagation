@@ -60,7 +60,6 @@ endif ()
 if (GPU STREQUAL "ON")
     add_executable(BackPropagation
             main.cu
-            Matrix.cpp
             Matrix.h
             RandomT.h
             ThreadPool.h
@@ -73,7 +72,6 @@ if (GPU STREQUAL "ON")
 else ()
     add_executable(BackPropagation
             main.cpp
-            Matrix.cpp
             Matrix.h
             RandomT.h
             ThreadPool.h
