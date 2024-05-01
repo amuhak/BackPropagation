@@ -67,6 +67,8 @@ else ()
             ThreadPool.h
             matmulBenchmark.h
             tests/matmul_unit_test.cpp
+            main.h
+            tests/matmul_unit_test.h
     )
 endif ()
 

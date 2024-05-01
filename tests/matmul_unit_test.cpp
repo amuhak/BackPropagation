@@ -1,11 +1,19 @@
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <sys/types.h>
+
+#include "../RandomT.h"
+#include "../Matrix.h"
+#include "matmul_unit_test.h"
+
 #ifdef DEBUG
 
-#include <iostream>
-#include <chrono>
-#include <cstdio>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_matrix.h>
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_cblas.h>
+
+#endif
 
 bool eq(double *a, double *b, int len) {
     const auto relative_difference_factor = 0.000001;
@@ -23,29 +31,48 @@ bool eq(double *a, double *b, int len) {
 
 bool matmul_unit_test() {
     RandomT<double> r;
-    const int n = 1000;
-    double *a = new double[n * n];
-    double *b = new double[n * n];
-    double *c = new double[n * n]{};
-    for (int i = 0; i < n * n; i++) {
+    const ulong n = (1U << 10U) + 1;
+
+    auto *a = new double[n * n];
+    auto *b = new double[n * n];
+    auto *c = new double[n * n]{};
+
+    for (uint i = 0; i < n * n; i++) {
         a[i] = r.generate();
         b[i] = r.generate();
     }
+
     Matrix<double> m1(n, n, a);
     Matrix<double> m2(n, n, b);
-    auto m3 = matrix_multiply_parallel(m1, m2);
-    matmulBenchmark(m1, m2, matrix_multiply_parallel < double, double > );
-    // m3.print();
+
+    auto ans = matrix_multiply(m1, m2);
+    auto ans_parallel = matrix_multiply_parallel(m1, m2);
+
+#ifdef DEBUG
     gsl_matrix_view A = gsl_matrix_view_array(a, n, n);
     gsl_matrix_view B = gsl_matrix_view_array(b, n, n);
     gsl_matrix_view C = gsl_matrix_view_array(c, n, n);
-    auto start = std::chrono::high_resolution_clock::now();
     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans,
                    1.0, &A.matrix, &B.matrix,
                    0.0, &C.matrix);
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Elapsed time: " << std::chrono::duration<double>(end - start).count() << "s\n";
-    std::cout << std::boolalpha;
-    return eq(m3.data, C.matrix.data, m3.length);
-}
 #endif
+
+    bool correct;
+    std::cout << std::boolalpha;
+    std::cout << "Matrix multiplication test" << std::endl;
+    std::cout << "Matrix size: " << n << "x" << n << std::endl;
+    std::cout << "Matrix multiplication single threaded == Matrix multiplication parallel  "
+              << (correct = (ans == ans_parallel))
+              << std::endl;
+
+#if DEBUG
+    bool temp = eq(c, ans.data, n * n);
+    std::cout << "Matrix multiplication single threaded == GSL matrix multiplication       " << temp << std::endl;
+    correct &= temp;
+#endif
+
+    delete[] a;
+    delete[] b;
+    delete[] c;
+    return correct;
+}
