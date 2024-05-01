@@ -31,4 +31,3 @@ So if I want a build with the GPU without optimizations (debug mode), I would ru
 cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=Debug -DGPU=ON -DTESTING=OFF 
 cmake --build . --target BackPropagation --config Debug
 ```
-
