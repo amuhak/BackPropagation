@@ -32,4 +32,3 @@ cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=Debug -DGPU=ON -DTESTING=OFF
 cmake --build . --target BackPropagation --config Debug
 ```
 
-
