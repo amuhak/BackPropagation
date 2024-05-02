@@ -19,6 +19,8 @@ jobs:
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -64,23 +66,10 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C Debug
 
-    - name: Make GitHub release
-      run: |
-        export TAG="0.0.0"
-        export DESCRIPTION="discription"
-        
-        echo "Checking if release exists and deleting..."
-        
-        if $(gh release list | grep -q -e "${TAG}"); then
-          gh release delete "${TAG}" -y --cleanup-tag
-        fi
-
-        echo "Creating release..."
-        gh release create "${TAG}" \
-          --prerelease \
-          --title "${TAG}" \
-          --notes "${DESCRIPTION}" \
-          --target "${GITHUB_HEAD_REF}"
+    - name: Make GitHub release  
+      run: gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.2 --prerelease -F ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
         
 
