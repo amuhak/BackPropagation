@@ -12,6 +12,7 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   build_Debug_CPU:
@@ -68,9 +69,7 @@ jobs:
       run: ctest -C Debug
 
     - name: Make GitHub release  
-      run: gh issue --repo ${{ github.repository }} create --title "Issue title" --body "Issue body"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.2 --prerelease -F .\main.cu
 
         
 
