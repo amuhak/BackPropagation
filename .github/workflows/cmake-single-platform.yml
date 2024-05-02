@@ -66,7 +66,38 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C Debug
 
+    - name: NVCC install
+      run: |
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
+        sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
+        wget https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda-repo-ubuntu2204-12-4-local_12.4.1-550.54.15-1_amd64.deb
+        sudo dpkg -i cuda-repo-ubuntu2204-12-4-local_12.4.1-550.54.15-1_amd64.deb
+        sudo cp /var/cuda-repo-ubuntu2204-12-4-local/cuda-*-keyring.gpg /usr/share/keyrings/
+        sudo apt-get update
+        sudo apt-get -y install cuda-toolkit-12-4
+        nvcc --version
+    
+    - name: Configure CMake with GPU Release
+      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release -DGPU=ON 
+    
+    - name: Build with GPU Release
+      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release
+
+    - name : Move and Rename GPU Release
+      run: | 
+        cp ./build/BackPropagation ./output/Release_GPU_Build_Linux_x64
+    
+    - name: Configure CMake with GPU Debug
+      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug -DGPU=ON
+
+    - name: Build with GPU Debug
+      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug
+
+    - name : Move and Rename GPU Debug
+      run: | 
+        cp ./build/BackPropagation ./output/Debug_GPU_Build_Linux_x64
+        
     - name: Make GitHub release  
       run: |
-        gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.0.0 --prerelease -F ./Releases.md ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64
-        nvcc -V
+        gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.0.0 --prerelease -F ./Releases.md ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64 ./output/Release_GPU_Build_Linux_x64 ./output/Debug_GPU_Build_Linux_x64
+    
