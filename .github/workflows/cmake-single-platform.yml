@@ -67,7 +67,7 @@ jobs:
       run: ctest -C Debug
 
     - name: Make GitHub release  
-      run: gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.2 --prerelease -F ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64
+      run: gh issue --repo ${{ github.repository }} create --title "Issue title" --body "Issue body"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
