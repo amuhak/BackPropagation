@@ -99,5 +99,6 @@ jobs:
 
     - name: Make GitHub release  
       run: |
+        gh release delete v0.0.0 -y
         gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.0.0 --prerelease -F ./Releases.md ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64 ./output/Release_GPU_Build_Linux_x64 ./output/Debug_GPU_Build_Linux_x64
     
