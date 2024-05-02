@@ -78,7 +78,7 @@ jobs:
         /usr/local/cuda/bin/nvcc --version
     
     - name: Configure CMake with GPU Release
-      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release -DGPU=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
+      run: cmake -B ${{github.workspace}}/build CMakeLists.txt -DGPU=ON -DTESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
     
     - name: Build with GPU Release
       run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release
@@ -88,7 +88,7 @@ jobs:
         cp ./build/BackPropagation ./output/Release_GPU_Build_Linux_x64
     
     - name: Configure CMake with GPU Debug
-      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug -DGPU=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
+      run: cmake -B ${{github.workspace}}/build CMakeLists.txt -DGPU=ON -DTESTING=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
 
     - name: Build with GPU Debug
       run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug
