@@ -67,8 +67,7 @@ jobs:
       run: ctest -C Debug
 
     - name: Make GitHub release  
-      run: | 
-        ls
+      run: |
         gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.0.0 --prerelease -F ./Releases.md ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64
 
         
