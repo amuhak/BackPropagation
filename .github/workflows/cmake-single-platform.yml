@@ -75,10 +75,10 @@ jobs:
         sudo cp /var/cuda-repo-ubuntu2204-12-4-local/cuda-*-keyring.gpg /usr/share/keyrings/
         sudo apt-get update
         sudo apt-get -y install cuda-toolkit-12-4
-        nvcc --version
+        /usr/local/cuda/bin/nvcc --version
     
     - name: Configure CMake with GPU Release
-      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release -DGPU=ON 
+      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release -DGPU=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
     
     - name: Build with GPU Release
       run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Release
@@ -88,7 +88,7 @@ jobs:
         cp ./build/BackPropagation ./output/Release_GPU_Build_Linux_x64
     
     - name: Configure CMake with GPU Debug
-      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug -DGPU=ON
+      run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug -DGPU=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
 
     - name: Build with GPU Debug
       run: cmake --build ${{github.workspace}}/build --target BackPropagation --config Debug
@@ -96,7 +96,7 @@ jobs:
     - name : Move and Rename GPU Debug
       run: | 
         cp ./build/BackPropagation ./output/Debug_GPU_Build_Linux_x64
-        
+
     - name: Make GitHub release  
       run: |
         gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.0.0 --prerelease -F ./Releases.md ./output/Release_CPU_Build_Linux_x64 ./output/Debug_CPU_Build_Linux_x64 ./output/Release_GPU_Build_Linux_x64 ./output/Debug_GPU_Build_Linux_x64
