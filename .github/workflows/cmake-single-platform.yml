@@ -71,7 +71,7 @@ jobs:
     - name: Make GitHub release  
       run: | 
         ls
-        gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.2 --prerelease -F .\main.cu
+        gh release  --title "Tetsing Builds" --repo ${{ github.repository }} create v0.2 --prerelease -F main.cu
 
         
 
