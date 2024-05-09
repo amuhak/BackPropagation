@@ -2,14 +2,20 @@
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
 
+#include <cstdlib>
+#include <memory>
 #include <stdexcept>
 #include <iostream>
-#include <cuda.h>
 #include <cuda_runtime.h>
-#include <gsl/gsl_matrix.h>
+#include <string>
+#include <sys/types.h>
 
 #include "RandomT.h"
 #include "Matrix.h"
+#include "cuda_runtime_api.h"
+#include "device_launch_parameters.h"
+#include "device_types.h"
+#include "driver_types.h"
 
 #define EPSILON 0.00001
 #define SHIFT_SIZE 1024
@@ -17,13 +23,13 @@
 template<typename T>
 class Matrix_cu {
 public:
-    int *rows;
-    int rowsCPU;
-    int *cols;
-    int colsCPU;
-    int *length;
-    int lengthCPU;
-    T *data;
+    int *rows;      //NOLINT
+    int rowsCPU;    //NOLINT
+    int *cols;      //NOLINT
+    int colsCPU;    //NOLINT
+    int *length;    //NOLINT
+    int lengthCPU;  //NOLINT
+    T *data;        //NOLINT
 
     Matrix_cu(int rows, int cols) {
         if (rows <= 0 || cols <= 0) {
@@ -170,9 +176,9 @@ matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols
     decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
     shiftDown *= SHIFT_SIZE;
     shiftRight *= SHIFT_SIZE;
-    auto x = blockIdx.x + shiftDown;
-    auto y = threadIdx.x + shiftRight;
-    for (long i = 0; i < aCols; i++) {
+    uint const x = blockIdx.x + shiftDown;
+    uint const y = threadIdx.x + shiftRight;
+    for (uint i = 0; i < aCols; i++) {
         ans += a[x * aCols + i] * b[i * bCols + y];
     }
     c[x * cCols + y] = ans;
