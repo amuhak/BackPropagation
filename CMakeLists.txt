@@ -67,6 +67,8 @@ if (GPU STREQUAL "ON")
             Matrix.cuh
             tests/matmul_unit_test.cu
             tests/matmul_unit_test.cuh
+            CsvToMatrix.cpp
+            CsvToMatrix.h
     )
 else ()
     add_executable(BackPropagation
@@ -76,6 +78,8 @@ else ()
             ThreadPool.h
             tests/matmul_unit_test.cpp
             tests/matmul_unit_test.h
+            CsvToMatrix.cpp
+            CsvToMatrix.h
     )
 endif ()
 
