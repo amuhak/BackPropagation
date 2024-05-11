@@ -67,7 +67,6 @@ if (GPU STREQUAL "ON")
             Matrix.cuh
             tests/matmul_unit_test.cu
             tests/matmul_unit_test.cuh
-            CSV.cpp
             CSV.h
     )
 else ()
@@ -78,7 +77,6 @@ else ()
             ThreadPool.h
             tests/matmul_unit_test.cpp
             tests/matmul_unit_test.h
-            CSV.cpp
             CSV.h
     )
 endif ()

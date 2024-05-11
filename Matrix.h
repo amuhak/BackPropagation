@@ -125,7 +125,7 @@ public:
      * @param index row to access
      * @return a pointer to the row
      */
-    auto operator[](long index) {
+    auto operator[](long index) const {
         return (data + (index * cols));
     }
 
