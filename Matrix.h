@@ -70,12 +70,7 @@ public:
      * @param other matrix to copy from
      */
     Matrix(const Matrix<T> &other) {
-        if (this->rows != other.rows || this->cols != other.cols) {
-            throw std::invalid_argument("Matrix dimensions do not match." +
-                                        std::to_string(this->rows) + "x" + std::to_string(this->cols) + " and " +
-                                        std::to_string(other.rows) + "x" + std::to_string(other.cols) +
-                                        " respectively.");
-        }
+        std::cout << "Copy constructor called" << std::endl;
         this->rows = other.rows;
         this->cols = other.cols;
         length = other.length;
@@ -157,12 +152,6 @@ public:
         if (this == &other) {
             return *this;
         }
-        if (this->rows != other.rows || this->cols != other.cols) {
-            throw std::invalid_argument("Matrix dimensions do not match." +
-                                        std::to_string(this->rows) + "x" + std::to_string(this->cols) + " and " +
-                                        std::to_string(other.rows) + "x" + std::to_string(other.cols) +
-                                        " respectively.");
-        }
         set(other.data);
         return *this;
     }
@@ -176,12 +165,6 @@ public:
         std::cout << "Move assignment operator called\n";
         if (this == &other) {
             return *this;
-        }
-        if (this->rows != other.rows || this->cols != other.cols) {
-            throw std::invalid_argument("Matrix dimensions do not match." +
-                                        std::to_string(this->rows) + "x" + std::to_string(this->cols) + " and " +
-                                        std::to_string(other.rows) + "x" + std::to_string(other.cols) +
-                                        " respectively.");
         }
         delete[] this->data;
         std::swap(data, other.data);
