@@ -11,7 +11,8 @@
 #include <sstream>
 
 template<typename T>
-Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol = 0, const char &delimiter = ',') {
+Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol = 0, int noRows = -1,
+                      const char &delimiter = ',') {
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file");
@@ -23,6 +24,10 @@ Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol 
             skipRow--;
             continue;
         }
+        if (noRows == 0) {
+            break;
+        }
+        noRows--;
         std::vector<T> row;
         std::stringstream ss(line);
         std::string cell;

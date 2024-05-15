@@ -2,11 +2,14 @@
 #ifndef BACKPROPAGATION_MATRIX_H
 #define BACKPROPAGATION_MATRIX_H
 
+#define THRESHOLD_TO_USE_PARALLEL 185ul // You can tune this value to get the best performance
+
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>
 #include <string>
 #include <thread>
+#include <sys/types.h>
 
 #ifdef DEBUG_MODE
 #include <gsl/gsl_matrix.h>
@@ -166,9 +169,66 @@ public:
         if (this == &other) {
             return *this;
         }
-        delete[] this->data;
         std::swap(data, other.data);
         return *this;
+    }
+
+    Matrix<T> operator/(T scalar) {
+        Matrix<T> result(*this);
+        T *temp = result.data;
+        for (int i = 0; i < length; i++) {
+            temp[i] /= scalar;
+        }
+        return result;
+    }
+
+    Matrix<T> operator*(T scalar) {
+        Matrix<T> result(*this);
+        T *temp = result.data;
+        for (int i = 0; i < length; i++) {
+            temp[i] *= scalar;
+        }
+        return result;
+    }
+
+    Matrix<T> operator+(T scalar) {
+        Matrix<T> result(*this);
+        T *temp = result.data;
+        for (int i = 0; i < length; i++) {
+            temp[i] += scalar;
+        }
+        return result;
+    }
+
+    Matrix<T> operator-(T scalar) {
+        Matrix<T> result(*this);
+        T *temp = result.data;
+        for (int i = 0; i < length; i++) {
+            temp[i] -= scalar;
+        }
+        return result;
+    }
+
+    Matrix<T> operator+(Matrix<T> &other) {
+        if (rows == other.rows && cols == other.cols) {
+            Matrix<T> result(rows, cols);
+            for (int i = 0; i < length; i++) {
+                result.data[i] = data[i] + other.data[i];
+            }
+            return result;
+        }
+        if (rows == other.rows && other.cols == 1) {
+            Matrix<T> result(rows, cols);
+            for (int i = 0; i < cols; i++) {
+                for (int j = 0; j < rows; j++) {
+                    result[j][i] = data[j * cols + i] + other[j][0];
+                }
+            }
+            return result;
+        }
+        throw std::invalid_argument("Matrix dimensions do not match. " +
+                                    std::to_string(rows) + "x" + std::to_string(cols) + " and " +
+                                    std::to_string(other.rows) + "x" + std::to_string(other.cols) + " respectively.");
     }
 
 #ifdef DEBUG_MODE
@@ -198,6 +258,29 @@ public:
         }
     }
 
+    void fillRandom(T min, T max) {
+        RandomT<T> rand;
+        for (int i = 0; i < length; i++) {
+            data[i] = rand.generate(min, max);
+        }
+    }
+
+    void t() {
+        transpose();
+    }
+
+    void transpose() {
+        T *newData = new T[length];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                newData[j * rows + i] = data[i * cols + j];
+            }
+        }
+        delete[] data;
+        std::swap(data, newData);
+        std::swap(rows, cols);
+    }
+
     /**
      * Prints the matrix
      */
@@ -218,7 +301,9 @@ public:
     }
 
     ~Matrix() {
+        std::cout << "Something died" << std::endl;
         delete[] this->data;
+        this->data = nullptr;
     }
 };
 
@@ -309,6 +394,18 @@ decltype(T{} * U{}) matrix_multiply_internal(const Matrix<T> *a, const Matrix<U>
         ans += a->data[x * a->cols + i] * b->data[i * b->cols + y];
     }
     return ans;
+}
+
+template<typename T, typename U>
+Matrix<decltype(T{} * U{})> matmult(const Matrix<T> &a, const Matrix<U> &b) {
+
+    ulong const threshold = THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL;
+    ulong const num_multiplications = a.rows * a.cols * b.cols;
+
+    if (num_multiplications > threshold) {
+        return matrix_multiply_parallel(a, b);
+    }
+    return matrix_multiply(a, b);
 }
 
 #endif //BACKPROPAGATION_MATRIX_H
