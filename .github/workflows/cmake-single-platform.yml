@@ -27,7 +27,7 @@ jobs:
     - name: Install Dependencys
       run: |
         whoami
-        sudo apt install cmake pkg-config build-essential libgsl-dev
+        apt install cmake pkg-config build-essential libgsl-dev
         
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
