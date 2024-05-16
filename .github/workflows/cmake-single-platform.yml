@@ -26,6 +26,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install Dependencys
       run: |
+        whoami
         sudo apt install cmake pkg-config build-essential libgsl-dev
         
     - name: Configure CMake
