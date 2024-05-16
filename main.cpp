@@ -54,6 +54,17 @@ Matrix<double> softmax(Matrix<double> const &m) {
     return result;
 }
 
+/*
+ * def one_hot(Y):
+    one_hot_Y = np.zeros((Y.size, Y.max() + 1))
+    one_hot_Y[np.arange(Y.size), Y] = 1
+    one_hot_Y = one_hot_Y.T
+    return one_hot_Y
+ */
+Matrix<double> one_hot(Matrix<double> const &m) {
+
+}
+
 std::tuple<Matrix<double>, Matrix<double>, Matrix<double>, Matrix<double>> forward_propagation(Matrix<double> &X,
                                                                                                Matrix<double> &W1,
                                                                                                Matrix<double> &b1,
@@ -85,13 +96,13 @@ int main() {
     data.t();
     test_data.t();
 
-    Matrix<double> Y_train(1, n, data[0]);
-    Matrix<double> X_train(m - 1, n, data[1]);
+    Matrix<double> const Y_train(1, n, data[0]);
+    Matrix<double> const X_train(m - 1, n, data[1]);
 
-    Matrix<double> Y_test(1, a, test_data[0]);
-    Matrix<double> X_test(m - 1, a, test_data[1]);
+    Matrix<double> const Y_test(1, a, test_data[0]);
+    Matrix<double> const X_test(m - 1, a, test_data[1]);
 
-    Matrix<double> W1(10, 4);
+    Matrix<double> W1(10, 784);
     Matrix<double> b1(10, 1);
     Matrix<double> W2(10, 10);
     Matrix<double> b2(10, 1);
