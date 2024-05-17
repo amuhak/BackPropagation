@@ -73,12 +73,22 @@ public:
      * @param other matrix to copy from
      */
     Matrix(const Matrix<T> &other) {
-        std::cout << "Copy constructor called" << std::endl;
         this->rows = other.rows;
         this->cols = other.cols;
         length = other.length;
         this->data = new T[length];
         set(other.data);
+    }
+
+    template<class U>
+    Matrix(const Matrix<U> &other) {
+        this->rows = other.rows;
+        this->cols = other.cols;
+        length = other.length;
+        this->data = new T[length];
+        for (int i = 0; i < length; i++) {
+            this->data[i] = (T) other.data[i];
+        }
     }
 
     Matrix(Matrix &&other) noexcept {
@@ -155,6 +165,13 @@ public:
         if (this == &other) {
             return *this;
         }
+        if (length != other.length) {
+            delete[] data;
+            data = new T[other.length];
+        }
+        rows = other.rows;
+        cols = other.cols;
+        length = other.length;
         set(other.data);
         return *this;
     }
@@ -169,6 +186,9 @@ public:
         if (this == &other) {
             return *this;
         }
+        std::swap(rows, other.rows);
+        std::swap(cols, other.cols);
+        std::swap(length, other.length);
         std::swap(data, other.data);
         return *this;
     }
@@ -231,6 +251,51 @@ public:
                                     std::to_string(other.rows) + "x" + std::to_string(other.cols) + " respectively.");
     }
 
+    Matrix<T> operator-(Matrix<T> &other) {
+        if (rows == other.rows && cols == other.cols) {
+            Matrix<T> result(rows, cols);
+            for (int i = 0; i < length; i++) {
+                result.data[i] = data[i] - other.data[i];
+            }
+            return result;
+        }
+        if (rows == other.rows && other.cols == 1) {
+            Matrix<T> result(rows, cols);
+            for (int i = 0; i < cols; i++) {
+                for (int j = 0; j < rows; j++) {
+                    result[j][i] = data[j * cols + i] - other[j][0];
+                }
+            }
+            return result;
+        }
+        throw std::invalid_argument("Matrix dimensions do not match. " +
+                                    std::to_string(rows) + "x" + std::to_string(cols) + " and " +
+                                    std::to_string(other.rows) + "x" + std::to_string(other.cols) + " respectively.");
+    }
+
+    // Element wise multiplication
+    Matrix<T> operator*(Matrix<T> &other) {
+        if (rows == other.rows && cols == other.cols) {
+            Matrix<T> result(rows, cols);
+            for (int i = 0; i < length; i++) {
+                result.data[i] = data[i] * other.data[i];
+            }
+            return result;
+        }
+        if (rows == other.rows && other.cols == 1) {
+            Matrix<T> result(rows, cols);
+            for (int i = 0; i < cols; i++) {
+                for (int j = 0; j < rows; j++) {
+                    result[j][i] = data[j * cols + i] * other[j][0];
+                }
+            }
+            return result;
+        }
+        throw std::invalid_argument("Matrix dimensions do not match. " +
+                                    std::to_string(rows) + "x" + std::to_string(cols) + " and " +
+                                    std::to_string(other.rows) + "x" + std::to_string(other.cols) + " respectively.");
+    }
+
 #ifdef DEBUG_MODE
     /**
      * @param gsl_matrix to compare with
@@ -265,26 +330,25 @@ public:
         }
     }
 
-    void t() {
-        transpose();
+    Matrix<T> t() {
+        return transpose();
     }
 
-    void transpose() {
-        T *newData = new T[length];
+    Matrix<T> transpose() {
+        Matrix<T> ans = Matrix<T>(cols, rows);
+        T *newData = ans.data;
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 newData[j * rows + i] = data[i * cols + j];
             }
         }
-        delete[] data;
-        std::swap(data, newData);
-        std::swap(rows, cols);
+        return ans;
     }
 
     /**
      * Prints the matrix
      */
-    void print() {
+    void print() const {
         std::cout << "Matrix: " << rows << "x" << cols << "\n";
         for (int i = 0; i < rows; i++) {
             std::cout << "[";
@@ -301,7 +365,6 @@ public:
     }
 
     ~Matrix() {
-        std::cout << "Something died" << std::endl;
         delete[] this->data;
         this->data = nullptr;
     }
@@ -327,11 +390,11 @@ Matrix<decltype(T{} * U{})> matrix_multiply(const Matrix<T> &a, const Matrix<U> 
     return result;
 }
 
-template<typename T, typename U, typename V>
+template<typename T>
 auto
 matrix_multiply_solve_for_range_internal(const Matrix<T> *a,
-                                         const Matrix<U> *b,
-                                         Matrix<V> *result,
+                                         const Matrix<T> *b,
+                                         Matrix<T> *result,
                                          long long start,
                                          long long end) {
     long long xStart = start / b->cols;
@@ -355,14 +418,14 @@ matrix_multiply_solve_for_range_internal(const Matrix<T> *a,
  * @param b Input matrix 2
  * @return The result of the matrix multiplication. The return type is:  \code Matrix &lt;decltype(T{} * U{})&gt; \endcode
  */
-template<typename T, typename U>
-Matrix<decltype(T{} * U{})> matrix_multiply_parallel(const Matrix<T> &a, const Matrix<U> &b) {
+template<typename T>
+Matrix<T> matrix_multiply_parallel(const Matrix<T> &a, const Matrix<T> &b) {
     if (a.cols != b.rows) {
         throw std::invalid_argument("Matrix dimensions do not match." +
                                     std::to_string(a.rows) + "x" + std::to_string(a.cols) + " and " +
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");
     }
-    Matrix<decltype(T{} * U{})> result(a.rows, b.cols);
+    Matrix<T> result(a.rows, b.cols);
     result.fill(69);
     const long long n = result.length - 1;
     long long noOfSolutionsPerThread = n / CONCURRENCY_LIMIT;
@@ -375,7 +438,7 @@ Matrix<decltype(T{} * U{})> matrix_multiply_parallel(const Matrix<T> &a, const M
     for (long long i = 0; i <= n; i += noOfSolutionsPerThread) {
         pool.QueueJob(
                 [noOfSolutionsPerThread, i, aPtr, bPtr, resultPtr, n] {
-                    matrix_multiply_solve_for_range_internal<T, U, T>(aPtr,
+                    matrix_multiply_solve_for_range_internal<T>(aPtr,
                                                                       bPtr,
                                                                       resultPtr,
                                                                       i,
@@ -388,16 +451,16 @@ Matrix<decltype(T{} * U{})> matrix_multiply_parallel(const Matrix<T> &a, const M
 }
 
 template<typename T, typename U>
-decltype(T{} * U{}) matrix_multiply_internal(const Matrix<T> *a, const Matrix<U> *b, long x, long y) {
-    decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
+auto matrix_multiply_internal(const Matrix<T> *a, const Matrix<U> *b, long x, long y) {
+    auto ans = 0;
     for (int i = 0; i < a->cols; i++) {
         ans += a->data[x * a->cols + i] * b->data[i * b->cols + y];
     }
     return ans;
 }
 
-template<typename T, typename U>
-Matrix<decltype(T{} * U{})> matmult(const Matrix<T> &a, const Matrix<U> &b) {
+template<typename T>
+Matrix<T> matmult(const Matrix<T> &a, const Matrix<T> &b) {
 
     ulong const threshold = THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL;
     ulong const num_multiplications = a.rows * a.cols * b.cols;
