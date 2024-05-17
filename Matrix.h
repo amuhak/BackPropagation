@@ -301,7 +301,6 @@ public:
     }
 
     ~Matrix() {
-        std::cout << "Something died" << std::endl;
         delete[] this->data;
         this->data = nullptr;
     }
@@ -315,23 +314,23 @@ public:
  * @param b Input matrix 2
  * @return The result of the matrix multiplication. The return type is:  \code Matrix &lt;decltype(T{} * U{})&gt; \endcode
  */
-template<typename T, typename U>
-Matrix<decltype(T{} * U{})> matrix_multiply(const Matrix<T> &a, const Matrix<U> &b) {
+template<typename T>
+Matrix<T> matrix_multiply(const Matrix<T> &a, const Matrix<T> &b) {
     if (a.cols != b.rows || a.rows != b.cols) {
         throw std::invalid_argument("Matrix dimensions do not match." +
                                     std::to_string(a.rows) + "x" + std::to_string(a.cols) + " and " +
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");
     }
-    Matrix<decltype(T{} * U{})> result(a.rows, b.cols);
+    Matrix<T> result(a.rows, b.cols);
     matrix_multiply_solve_for_range_internal(&a, &b, &result, 0, result.length - 1);
     return result;
 }
 
-template<typename T, typename U, typename V>
+template<typename T>
 auto
 matrix_multiply_solve_for_range_internal(const Matrix<T> *a,
-                                         const Matrix<U> *b,
-                                         Matrix<V> *result,
+                                         const Matrix<T> *b,
+                                         Matrix<T> *result,
                                          long long start,
                                          long long end) {
     long long xStart = start / b->cols;
@@ -355,14 +354,14 @@ matrix_multiply_solve_for_range_internal(const Matrix<T> *a,
  * @param b Input matrix 2
  * @return The result of the matrix multiplication. The return type is:  \code Matrix &lt;decltype(T{} * U{})&gt; \endcode
  */
-template<typename T, typename U>
-Matrix<decltype(T{} * U{})> matrix_multiply_parallel(const Matrix<T> &a, const Matrix<U> &b) {
+template<typename T>
+Matrix<T> matrix_multiply_parallel(const Matrix<T> &a, const Matrix<T> &b) {
     if (a.cols != b.rows) {
         throw std::invalid_argument("Matrix dimensions do not match." +
                                     std::to_string(a.rows) + "x" + std::to_string(a.cols) + " and " +
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");
     }
-    Matrix<decltype(T{} * U{})> result(a.rows, b.cols);
+    Matrix<T> result(a.rows, b.cols);
     result.fill(69);
     const long long n = result.length - 1;
     long long noOfSolutionsPerThread = n / CONCURRENCY_LIMIT;
@@ -375,7 +374,7 @@ Matrix<decltype(T{} * U{})> matrix_multiply_parallel(const Matrix<T> &a, const M
     for (long long i = 0; i <= n; i += noOfSolutionsPerThread) {
         pool.QueueJob(
                 [noOfSolutionsPerThread, i, aPtr, bPtr, resultPtr, n] {
-                    matrix_multiply_solve_for_range_internal<T, U, T>(aPtr,
+                    matrix_multiply_solve_for_range_internal<T>(aPtr,
                                                                       bPtr,
                                                                       resultPtr,
                                                                       i,
@@ -387,17 +386,17 @@ Matrix<decltype(T{} * U{})> matrix_multiply_parallel(const Matrix<T> &a, const M
     return result;
 }
 
-template<typename T, typename U>
-decltype(T{} * U{}) matrix_multiply_internal(const Matrix<T> *a, const Matrix<U> *b, long x, long y) {
-    decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
+template<typename T>
+T matrix_multiply_internal(const Matrix<T> *a, const Matrix<T> *b, long x, long y) {
+    T ans = 0; // Auto doesn't work here for some reason
     for (int i = 0; i < a->cols; i++) {
         ans += a->data[x * a->cols + i] * b->data[i * b->cols + y];
     }
     return ans;
 }
 
-template<typename T, typename U>
-Matrix<decltype(T{} * U{})> matmult(const Matrix<T> &a, const Matrix<U> &b) {
+template<typename T>
+Matrix<T> matmult(const Matrix<T> &a, const Matrix<T> &b) {
 
     ulong const threshold = THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL;
     ulong const num_multiplications = a.rows * a.cols * b.cols;
