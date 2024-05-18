@@ -63,7 +63,6 @@ if (GPU STREQUAL "ON")
             Matrix.h
             RandomT.h
             ThreadPool.h
-            tests/matmul_unit_test.cpp
             Matrix.cuh
             tests/matmul_unit_test.cu
             tests/matmul_unit_test.cuh
