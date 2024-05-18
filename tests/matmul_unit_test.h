@@ -5,6 +5,6 @@
 #ifndef BACKPROPAGATION_MATMUL_UNIT_TEST_H
 #define BACKPROPAGATION_MATMUL_UNIT_TEST_H
 
-bool matmul_unit_test();
+bool matmul_unit_test(int no);
 
 #endif //BACKPROPAGATION_MATMUL_UNIT_TEST_H

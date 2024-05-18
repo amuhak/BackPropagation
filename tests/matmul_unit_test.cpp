@@ -29,9 +29,9 @@ bool eq(double *a, double *b, int len) {
     return true;
 }
 
-bool matmul_unit_test() {
+bool matmul_unit_test(int no) {
     RandomT<double> r;
-    const ulong n = (1U << 10U) + 1;
+    const ulong n = no;
 
     auto *a = new double[n * n];
     auto *b = new double[n * n];
