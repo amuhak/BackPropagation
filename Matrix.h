@@ -380,7 +380,7 @@ public:
  */
 template<typename T>
 Matrix<T> matrix_multiply(const Matrix<T> &a, const Matrix<T> &b) {
-    if (a.cols != b.rows || a.rows != b.cols) {
+    if (a.cols != b.rows) {
         throw std::invalid_argument("Matrix dimensions do not match." +
                                     std::to_string(a.rows) + "x" + std::to_string(a.cols) + " and " +
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");

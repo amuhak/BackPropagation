@@ -3,6 +3,8 @@
 #ifdef TESTING
 
 #include "tests/matmul_unit_test.h"
+using uint = unsigned int;
+using ulong = unsigned long;
 
 int main(int argc, char* argv[]) {
     std::cout << "Pass the size of the matrix as an comand line argument to the program" << std::endl;

@@ -2,6 +2,8 @@
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
 
+using uint = unsigned int;
+using ulong = unsigned long;
 #include <cstdlib>
 #include <memory>
 #include <stdexcept>
