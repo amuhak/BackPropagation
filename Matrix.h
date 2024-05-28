@@ -10,9 +10,15 @@
 #include <string>
 #include <thread>
 #include <sys/types.h>
+#include <functional>
 
-#ifdef DEBUG_MODE
+#ifdef DEBUG
+
 #include <gsl/gsl_matrix.h>
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_cblas.h>
+
 #endif
 
 #include "RandomT.h"
@@ -92,12 +98,29 @@ public:
     }
 
     Matrix(Matrix &&other) noexcept {
-        std::cout << "Move constructor called\n";
+        // std::cout << "Move constructor called\n";
         this->rows = other.rows;
         this->cols = other.cols;
         length = other.length;
         this->data = other.data;
         other.data = nullptr;
+    }
+
+    T sum() {
+        T sum = 0;
+        for (int i = 0; i < length; i++) {
+            sum += data[i];
+        }
+        return sum;
+    }
+
+    ulong hash() {
+        ulong seed = 0;
+        for (int i = 0; i < length; i++) {
+            // Combine the hash of the current element with the seed
+            seed ^= std::hash<double>{}(data[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+        return seed;
     }
 
     /**
@@ -182,7 +205,7 @@ public:
      * @return reference to the new matrix
      */
     Matrix &operator=(Matrix<T> &&other) noexcept {
-        std::cout << "Move assignment operator called\n";
+        // std::cout << "Move assignment operator called\n";
         if (this == &other) {
             return *this;
         }
@@ -296,21 +319,27 @@ public:
                                     std::to_string(other.rows) + "x" + std::to_string(other.cols) + " respectively.");
     }
 
-#ifdef DEBUG_MODE
+#ifdef DEBUG
+
     /**
      * @param gsl_matrix to compare with
      * @return true if the matrices are equal, false otherwise
      */
-        bool operator==(const gsl_matrix &other) const {
-            for (int i = 0; i < length; i++) {
-                if (data[i] != other.data[i]) {
-                    std::cout << "Mismatch at index: " << i << " Expected: " << other.data[i] << " Got: " << data[i]
-                              << std::endl;
-                    return false;
-                }
+    bool operator==(const gsl_matrix &other) const {
+        for (int i = 0; i < length; i++) {
+            if (data[i] != other.data[i]) {
+                std::cout << "Mismatch at index: " << i << " Expected: " << other.data[i] << " Got: " << data[i]
+                          << std::endl;
+                return false;
             }
-            return true;
         }
+        return true;
+    }
+
+    gsl_matrix_view to_gsl_matrix() {
+        return gsl_matrix_view_array(data, rows, cols);
+    }
+
 #endif
 
     /**
@@ -471,4 +500,19 @@ Matrix<T> matmult(const Matrix<T> &a, const Matrix<T> &b) {
     return matrix_multiply(a, b);
 }
 
+#ifdef DEBUG
+
+template<typename T>
+Matrix<T> matmultF(Matrix<T> &a, Matrix<T> &b) {
+    Matrix<T> result(a.rows, b.cols);
+    auto c = a.to_gsl_matrix();
+    auto d = b.to_gsl_matrix();
+    auto e = result.to_gsl_matrix();
+    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans,
+                   1.0, &c.matrix, &d.matrix,
+                   0.0, &e.matrix);
+    return result;
+}
+
+#endif
 #endif //BACKPROPAGATION_MATRIX_H
