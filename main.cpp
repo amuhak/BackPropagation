@@ -1,3 +1,4 @@
+#include <string>
 #ifdef TESTING
 #include <iostream>
 #include <cstdlib>
@@ -51,7 +52,7 @@ Matrix<double> relu_derivative(Matrix<double> const &m) {
 
 Matrix<double> softmax(Matrix<double> const &m) {
     Matrix<double> result(m);
-    auto *sum = new double[m.cols];
+    auto *sum = new double[m.cols]{};
     auto *data = result.data;
     for (int i = 0; i < m.length; i++) {
         data[i] = std::exp(data[i]);
@@ -102,7 +103,6 @@ backward_prop(Matrix<double> &Z1, Matrix<double> &A1,
     auto dZ2 = A2 - one_hot_Y;
     auto dW2 = matmult(dZ2, A1.t()) * (1.0 / Y.rows);
     auto db2 = (1.0 / Y.rows) * std::accumulate(dZ2.data, dZ2.data + dZ2.length, 0.0);
-    std::cout << db2 << std::endl;
     auto der = relu_derivative(Z1);
     auto mutl = matmult(W2.t(), dZ2);
     auto dZ1 = mutl * der;
@@ -119,23 +119,23 @@ void update_params(Matrix<double> &W1, Matrix<double> &b1,
     auto t = (dW1 * alpha);
     W1 = W1 - t;
     b1 = b1 - (db1 * alpha);
-    auto tt = (dW2 * alpha);
-    W2 = W2 - tt;
+    t = (dW2 * alpha);
+    W2 = W2 - t;
     b2 = b2 - (db2 * alpha);
 }
 
 Matrix<double> get_predictions(Matrix<double> const &A2) {
-    Matrix<double> result(1, A2.cols);
+    Matrix<double> result(A2.cols, 1);
     for (int i = 0; i < A2.cols; i++) {
         double max = A2[0][i];
-        int index = 0;
+        int maxLocation = 0;
         for (int j = 1; j < A2.rows; j++) {
-            if (A2[j][i] > max) {
+            if (max < A2[j][i]) {
                 max = A2[j][i];
-                index = j;
+                maxLocation = j;
             }
         }
-        result[0][i] = index;
+        result[0][i] = maxLocation;
     }
     return result;
 }
@@ -148,7 +148,7 @@ Matrix<double> get_predictions(Matrix<double> const &A2) {
 
 double get_accuracy(Matrix<double> const &predictions, Matrix<double> const &Y) {
     double sum = 0;
-    for (int i = 0; i < Y.cols; i++) {
+    for (int i = 0; i < Y.rows; i++) {
         if (predictions[0][i] == Y[0][i]) {
             sum++;
         }
@@ -167,7 +167,6 @@ int main() {
     test_data = test_data.t();
 
     Matrix<double> Y_train(trainLen, 1, data[0]);
-    std::cout << Y_train.sum() << std::endl;
     Matrix<double> X_train(imgSize, trainLen, data[1]);
 
     Matrix<double> Y_test(testLen, 1, test_data[0]);
@@ -193,10 +192,9 @@ int main() {
     Matrix<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
     Matrix<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
     std::cout << std::setprecision(10);
-    std::cout << std::accumulate(W1.data, W1.data + W1.length, 0.0) << std::endl;
 
     double const alpha = 0.10;
-    int const iterations = 500;
+    int const iterations = 10;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -207,11 +205,17 @@ int main() {
         if (i % 10 == 0) {
             std::cout << "Iteration: " << i << std::endl;
             auto predictions = get_predictions(A2);
-            std::cout << get_accuracy(predictions, Y_train) << std::endl;
+            std::cout << "Accuracy: " << get_accuracy(predictions, Y_train) << std::endl;
+            /*
+            MatrixToCsv("./Data/W1_" + std::to_string(i) + "_.csv", W1);
+            MatrixToCsv("./Data/b1_" + std::to_string(i) + "_.csv", b1);
+            MatrixToCsv("./Data/W2_" + std::to_string(i) + "_.csv", W2);
+            MatrixToCsv("./Data/b2_" + std::to_string(i) + "_.csv", b2);
+             */
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms"
+    std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "s"
               << std::endl;
 }
 
