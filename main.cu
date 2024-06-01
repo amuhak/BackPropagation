@@ -20,7 +20,6 @@ int main(int argc, char *argv[]) {
     std::cout << std::boolalpha;
     bool test;
     std::cout << (test = matmul_unit_test(no)) << std::endl;
-    matmul_unit_test(no);
     if (!test) {
         return 69;
     }

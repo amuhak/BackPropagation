@@ -4,6 +4,7 @@
 
 using uint = unsigned int;
 using ulong = unsigned long;
+
 #include <cstdlib>
 #include <memory>
 #include <stdexcept>
@@ -196,8 +197,8 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     }
     Matrix_cu<T> result(a.rowsCPU, b.colsCPU);
     result.fill0();
-    const int shiftDown = a.rowsCPU / (SHIFT_SIZE + 1);
-    const int shiftRight = b.colsCPU / (SHIFT_SIZE + 1);
+    const int shiftDown = (a.rowsCPU - 1) / (SHIFT_SIZE);
+    const int shiftRight = (b.colsCPU - 1) / (SHIFT_SIZE);
     for (int i = 0; i <= shiftDown; i++) {
         for (int j = 0; j <= shiftRight; j++) {
             int blockSize = min(SHIFT_SIZE, a.rowsCPU - i * SHIFT_SIZE);
