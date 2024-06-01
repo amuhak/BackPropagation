@@ -3,12 +3,14 @@
 #ifdef TESTING
 
 #include "tests/matmul_unit_test.h"
+#include <cstdlib>
+
 using uint = unsigned int;
 using ulong = unsigned long;
 
-int main(int argc, char* argv[]) {
-    std::cout << "Pass the size of the matrix as an comand line argument to the program" << std::endl;
-    int no = (1U << 10U) + 1;
+int main(int argc, char *argv[]) {
+    std::cout << "Pass the size of the matrix as an command line argument to the program" << std::endl;
+    int no = (1U << 11U);
     if (argc < 2) {
         std::cout << "Using default size of matrix: " << no << std::endl;
     } else {
@@ -17,7 +19,8 @@ int main(int argc, char* argv[]) {
     }
     std::cout << std::boolalpha;
     bool test;
-    std::cout << (test = matmul_unit_test(no));
+    std::cout << (test = matmul_unit_test(no)) << std::endl;
+    matmul_unit_test(no);
     if (!test) {
         return 69;
     }

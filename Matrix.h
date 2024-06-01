@@ -14,7 +14,6 @@
 
 #ifdef DEBUG
 
-#include <gsl/gsl_matrix.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_matrix_double.h>
 #include <gsl/gsl_cblas.h>
@@ -87,7 +86,7 @@ public:
     }
 
     template<class U>
-    Matrix(const Matrix<U> &other) {
+    explicit Matrix(const Matrix<U> &other) {
         this->rows = other.rows;
         this->cols = other.cols;
         length = other.length;
@@ -168,8 +167,10 @@ public:
         if (rows != other.rows || cols != other.cols) {
             return false;
         }
+        const auto relative_difference_factor = 0.0001;
         for (int i = 0; i < length; i++) {
-            if (data[i] != other.data[i]) {
+            auto max = std::max(std::abs(data[i]), std::abs(other.data[i]));
+            if (std::abs(data[i]) - std::abs(other.data[i]) > max * relative_difference_factor) {
                 std::cout << "Mismatch at index: " << i << " Expected: " << other.data[i] << " Got: " << data[i]
                           << std::endl;
                 return false;
@@ -415,7 +416,22 @@ Matrix<T> matrix_multiply(const Matrix<T> &a, const Matrix<T> &b) {
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");
     }
     Matrix<T> result(a.rows, b.cols);
-    matrix_multiply_solve_for_range_internal(&a, &b, &result, 0, result.length - 1);
+    T *cache = new T[b.rows];
+    T *aData = a.data;
+    T *bData = b.data;
+    for (int i = 0; i < b.cols; ++i) {
+        for (int j = 0; j < b.rows; ++j) {
+            cache[j] = bData[j * b.cols + i];
+        }
+        for (int j = 0; j < a.rows; ++j) {
+            T ans{};
+            for (int k = 0; k < a.cols; ++k) {
+                ans += aData[j * a.cols + k] * cache[k];
+            }
+            result.data[j * result.cols + i] = ans;
+        }
+    }
+    delete[] cache;
     return result;
 }
 

@@ -1,10 +1,12 @@
 #include <string>
+
 #ifdef TESTING
+
 #include <iostream>
 #include <cstdlib>
 #include "tests/matmul_unit_test.h"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     std::cout << "Pass the size of the matrix as an comand line argument to the program" << std::endl;
     int no = (1U << 10U) + 1;
     if (argc < 2) {
@@ -20,6 +22,7 @@ int main(int argc, char* argv[]) {
         return 69;
     }
 }
+
 #else
 
 #include <iostream>

@@ -1,10 +1,11 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <chrono>
 #include <sys/types.h>
-
 #include "../RandomT.h"
 #include "../Matrix.cuh"
+#include "../Matrix.h"
 #include "matmul_unit_test.cuh"
 
 #ifdef DEBUG
@@ -44,22 +45,31 @@ bool matmul_unit_test(int no) {
 
     Matrix<double> const m1(n, n, a);
     Matrix<double> const m2(n, n, b);
+
+    auto start_time_parallel = std::chrono::high_resolution_clock::now();
     auto ans_parallel = matrix_multiply_parallel(m1, m2);
+    auto end_time_parallel = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time_parallel = end_time_parallel - start_time_parallel;
 
-    Matrix_cu<double> c1 (n,n);
+    Matrix_cu<double> c1(n, n);
     c1.set(a);
-    Matrix_cu<double> c2 (n,n);
+    Matrix_cu<double> c2(n, n);
     c2.set(b);
-
+    auto start_time_cu = std::chrono::high_resolution_clock::now();
     auto ans = matrix_multiply(c1, c2);
+    auto end_time_cu = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time_cu = end_time_cu - start_time_cu;
 
 #ifdef DEBUG
     gsl_matrix_view const A = gsl_matrix_view_array(a, n, n);
     gsl_matrix_view const B = gsl_matrix_view_array(b, n, n);
     gsl_matrix_view C = gsl_matrix_view_array(c, n, n);
+    auto start_time_gsl = std::chrono::high_resolution_clock::now();
     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans,
                    1.0, &A.matrix, &B.matrix,
                    0.0, &C.matrix);
+    auto end_time_gsl = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time_gsl = end_time_gsl - start_time_gsl;
 #endif
 
     bool correct;
@@ -74,7 +84,14 @@ bool matmul_unit_test(int no) {
     bool const temp = eq(c, ans_parallel.data, n * n);
     std::cout << "Matrix multiplication parallel == GSL matrix multiplication   " << temp << std::endl;
     correct &= temp;
+    std::cout << "GSL time: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time_gsl).count()
+              << "ms" << std::endl;
 #endif
+    std::cout << "Parallel time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time_parallel).count()
+              << "ms" << std::endl;
+    std::cout << "CUDA time: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time_cu).count()
+              << "ms" << std::endl;
 
     delete[] a;
     delete[] b;
