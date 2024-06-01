@@ -2,6 +2,7 @@
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
 
+#include <vector>
 using uint = unsigned int;
 using ulong = unsigned long;
 
@@ -196,22 +197,38 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
         exit(-69);
     }
     Matrix_cu<T> result(a.rowsCPU, b.colsCPU);
-    result.fill0();
     const int shiftDown = (a.rowsCPU - 1) / (SHIFT_SIZE);
     const int shiftRight = (b.colsCPU - 1) / (SHIFT_SIZE);
+
+    int totalStreams = (shiftDown + 1) * (shiftRight + 1);
+
+    std::vector<cudaStream_t> streams(totalStreams);
+
+    for (int i = 0; i < totalStreams; i++) {
+        cudaStreamCreate(&streams[i]);
+    }
+
+    int streamIdx = 0;
     for (int i = 0; i <= shiftDown; i++) {
         for (int j = 0; j <= shiftRight; j++) {
             int blockSize = min(SHIFT_SIZE, a.rowsCPU - i * SHIFT_SIZE);
             int noOfThreads = min(SHIFT_SIZE, b.colsCPU - j * SHIFT_SIZE);
             noOfThreads = max(1, noOfThreads);
-            matrix_multiply_internal_cu<<<blockSize, noOfThreads>>>(
+
+            matrix_multiply_internal_cu<<<blockSize, noOfThreads, 0, streams[streamIdx]>>>(
                     a.data, a.colsCPU,
                     b.data, b.colsCPU,
                     result.data, result.colsCPU,
                     i, j);
-            cudaDeviceSynchronize();
+            streamIdx++;
         }
     }
+
+    for (int i = 0; i < totalStreams; ++i) {
+        cudaStreamSynchronize(streams[i]);
+        cudaStreamDestroy(streams[i]);
+    }
+
     return result;
 }
 
