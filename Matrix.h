@@ -23,7 +23,7 @@
 #include "RandomT.h"
 #include "ThreadPool.h"
 
-const int CONCURRENCY_LIMIT = (int) std::thread::hardware_concurrency();
+const int CONCURRENCY_LIMIT = std::max(1, (int) std::thread::hardware_concurrency());
 
 template<typename T>
 class Matrix {
@@ -436,22 +436,29 @@ Matrix<T> matrix_multiply(const Matrix<T> &a, const Matrix<T> &b) {
 }
 
 template<typename T>
-auto
-matrix_multiply_solve_for_range_internal(const Matrix<T> *a,
-                                         const Matrix<T> *b,
-                                         Matrix<T> *result,
-                                         long long start,
-                                         long long end) {
-    long long xStart = start / b->cols;
-    long long yStart = start % b->cols;
-    long long xEnd = (end) / b->cols;
-    long long yEnd = (end) % b->cols;
-    for (long long i = xStart; i <= xEnd; i++) {
-        const long yEndReal = (i == xEnd ? yEnd : (b->cols - 1));
-        const long yStartReal = (i == xStart ? yStart : 0);
-        for (long long j = yStartReal; j <= yEndReal; j++) {
-            result->data[i * result->cols + j] = matrix_multiply_internal(a, b, i, j);
+void matrix_multiply_solve_for_column_internal(const Matrix<T> *a, const Matrix<T> *b, const Matrix<T> *result, int i) {
+    T *cache = new T[b->rows];
+    T *aData = a->data;
+    T *bData = b->data;
+    T *resultData = result->data;
+    for (int j = 0; j < b->rows; ++j) {
+        cache[j] = bData[j * b->cols + i];
+    }
+    for (int j = 0; j < a->rows; ++j) {
+        T ans{};
+        for (int k = 0; k < a->cols; ++k) {
+            ans += aData[j * a->cols + k] * cache[k];
         }
+        resultData[j * result->cols + i] = ans;
+    }
+    delete[] cache;
+}
+
+template<typename T>
+void matrix_multiply_thread_worker(const Matrix<T> *a, const Matrix<T> *b, const Matrix<T> *result,
+                                   int start, int end, int noOfThreads) {
+    for (int i = start; i < end; i += noOfThreads) {
+        matrix_multiply_solve_for_column_internal(a, b, result, i);
     }
 }
 
@@ -471,23 +478,16 @@ Matrix<T> matrix_multiply_parallel(const Matrix<T> &a, const Matrix<T> &b) {
                                     std::to_string(b.rows) + "x" + std::to_string(b.cols) + " respectively.");
     }
     Matrix<T> result(a.rows, b.cols);
-    result.fill(69);
-    const long long n = result.length - 1;
-    long long noOfSolutionsPerThread = n / CONCURRENCY_LIMIT;
-    noOfSolutionsPerThread++;
-    ThreadPool pool;
-    pool.Start();
     auto *aPtr = &a;
     auto *bPtr = &b;
     auto *resultPtr = &result;
-    for (long long i = 0; i <= n; i += noOfSolutionsPerThread) {
+    auto bCols = b.cols;
+    ThreadPool pool;
+    pool.Start();
+    for (int i = 0; i < CONCURRENCY_LIMIT; i++) {
         pool.QueueJob(
-                [noOfSolutionsPerThread, i, aPtr, bPtr, resultPtr, n] {
-                    matrix_multiply_solve_for_range_internal<T>(aPtr,
-                                                                bPtr,
-                                                                resultPtr,
-                                                                i,
-                                                                std::min(i + noOfSolutionsPerThread - 1, n));
+                [aPtr, bPtr, resultPtr, i, bCols] {
+                    matrix_multiply_thread_worker<T>(aPtr, bPtr, resultPtr, i, bCols, CONCURRENCY_LIMIT);
                 }
         );
     }
