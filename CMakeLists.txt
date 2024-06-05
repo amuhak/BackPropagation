@@ -18,7 +18,6 @@ if (GPU STREQUAL "ON")
         message(fatal_error "could not find nvcc. please set CMAKE_CUDA_COMPILER to the path of nvcc.
         for example: -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc")
     endif ()
-    # set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
     enable_language(CUDA)
     message(STATUS "CUDA enabled")
 else ()
