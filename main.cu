@@ -10,7 +10,7 @@ using ulong = unsigned long;
 
 int main(int argc, char *argv[]) {
     std::cout << "Pass the size of the matrix as an command line argument to the program" << std::endl;
-    int no = (1U << 10U) + 1;
+    int no = (1U << 12U);
     if (argc < 2) {
         std::cout << "Using default size of matrix: " << no << std::endl;
     } else {

@@ -3,6 +3,7 @@
 #define BACKPROPAGATION_MATRIX_CUH
 
 #include <vector>
+
 using uint = unsigned int;
 using ulong = unsigned long;
 
@@ -163,15 +164,6 @@ public:
     }
 };
 
-template<typename T, typename U>
-auto matrix_multiply_internal_TEST(const Matrix<T> *a, const Matrix<U> *b, long x, long y) {
-    decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
-    for (int i = 0; i < a->cols; i++) {
-        ans += a->data[x * a->cols + i] * b->data[i * b->cols + y];
-    }
-    return ans;
-}
-
 template<typename T, typename U, typename V>
 __global__
 void
@@ -207,7 +199,7 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     for (int i = 0; i < totalStreams; i++) {
         cudaStreamCreate(&streams[i]);
     }
-
+    cudaFuncSetCacheConfig(matrix_multiply_internal_cu<T, U, decltype(T{} * U{})>, cudaFuncCachePreferL1);
     int streamIdx = 0;
     for (int i = 0; i <= shiftDown; i++) {
         for (int j = 0; j <= shiftRight; j++) {
@@ -220,6 +212,7 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
                     b.data, b.colsCPU,
                     result.data, result.colsCPU,
                     i, j);
+
             streamIdx++;
         }
     }
