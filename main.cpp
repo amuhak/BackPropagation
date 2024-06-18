@@ -1,5 +1,3 @@
-#include <string>
-
 #ifdef TESTING
 
 #include <iostream>
@@ -8,7 +6,7 @@
 
 int main(int argc, char *argv[]) {
     std::cout << "Pass the size of the matrix as an comand line argument to the program" << std::endl;
-    int no = (1U << 10U) + 1;
+    int no = (1U << 11U) + 1;
     if (argc < 2) {
         std::cout << "Using default size of matrix: " << no << std::endl;
     } else {
@@ -34,6 +32,7 @@ int main(int argc, char *argv[]) {
 #include <numeric>
 #include <chrono>
 #include <iomanip>
+#include <string>
 
 Matrix<double> relu(Matrix<double> const &m) {
     Matrix<double> result(m);
@@ -76,7 +75,7 @@ Matrix<double> softmax(Matrix<double> const &m) {
  */
 Matrix<double> one_hot(Matrix<double> const &m) {
     int const max = (int) *std::max_element(m.data, m.data + m.length) + 1;
-    Matrix<int> ans(max, m.rows);
+    Matrix<double> ans(max, m.rows);
     ans.fill0();
     double *data = m.data;
     for (int i = 0; i < m.length; i++) {
@@ -109,7 +108,7 @@ backward_prop(Matrix<double> &Z1, Matrix<double> &A1,
     auto der = relu_derivative(Z1);
     auto mutl = matmult(W2.t(), dZ2);
     auto dZ1 = mutl * der;
-    auto dW1 = matmult(dZ1, X.t()) * (1.0 / Y.rows);
+    auto dW1 = matmult(dZ1, X) * (1.0 / Y.rows);
     auto db1 = (1.0 / Y.rows) * std::accumulate(dZ1.data, dZ1.data + dZ1.length, 0.0);
     return {dW1, db1, dW2, db2};
 }
@@ -197,13 +196,13 @@ int main() {
     std::cout << std::setprecision(10);
 
     double const alpha = 0.10;
-    int const iterations = 10;
+    int const iterations = 500;
 
     auto start = std::chrono::high_resolution_clock::now();
-
+    auto X_train_t = X_train.t();
     for (int i = 0; i < iterations; i++) {
         auto [Z1, A1, Z2, A2] = forward_propagation(W1, b1, W2, b2, X_train);
-        auto [dW1, db1, dW2, db2] = backward_prop(Z1, A1, Z2, A2, W1, W2, X_train, Y_train);
+        auto [dW1, db1, dW2, db2] = backward_prop(Z1, A1, Z2, A2, W1, W2, X_train_t, Y_train);
         update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha);
         if (i % 10 == 0) {
             std::cout << "Iteration: " << i << std::endl;
