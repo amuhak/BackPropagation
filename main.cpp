@@ -97,8 +97,8 @@ forward_propagation(Matrix<double> &W1, Matrix<double> &b1,
 
 std::tuple<Matrix<double>, double, Matrix<double>, double>
 backward_prop(Matrix<double> &Z1, Matrix<double> &A1,
-              Matrix<double> &Z2, Matrix<double> &A2,
-              Matrix<double> &W1, Matrix<double> &W2,
+              Matrix<double> &A2,
+              Matrix<double> &W2,
               Matrix<double> &X, Matrix<double> &Y) {
 
     auto one_hot_Y = one_hot(Y);
@@ -177,22 +177,24 @@ int main() {
     X_train = X_train / 255.0; // Normalizing the data
     X_test = X_test / 255.0;   // Normalizing the data
 
-    /*
     Matrix<double> W1(10, 784);
     Matrix<double> b1(10, 1);
     Matrix<double> W2(10, 10);
     Matrix<double> b2(10, 1);
 
+
     W1.fillRandom(-0.5, 0.5);
     b1.fillRandom(-0.5, 0.5);
     W2.fillRandom(-0.5, 0.5);
     b2.fillRandom(-0.5, 0.5);
-    */
 
+    /*
     Matrix<double> W1 = CsvToMatrix<double>("./Data/W1.csv");
     Matrix<double> b1 = CsvToMatrix<double>("./Data/b1.csv");
     Matrix<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
     Matrix<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
+    */
+
     std::cout << std::setprecision(10);
 
     double const alpha = 0.10;
@@ -202,7 +204,7 @@ int main() {
     auto X_train_t = X_train.t();
     for (int i = 0; i < iterations; i++) {
         auto [Z1, A1, Z2, A2] = forward_propagation(W1, b1, W2, b2, X_train);
-        auto [dW1, db1, dW2, db2] = backward_prop(Z1, A1, Z2, A2, W1, W2, X_train_t, Y_train);
+        auto [dW1, db1, dW2, db2] = backward_prop(Z1, A1, A2, W2, X_train_t, Y_train);
         update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha);
         if (i % 10 == 0) {
             std::cout << "Iteration: " << i << std::endl;
