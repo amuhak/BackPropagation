@@ -34,6 +34,16 @@ public:
     T *data;    //NOLINT
 
     /**
+     * Default constructor for the Matrix class
+     */
+    Matrix() {
+        rows = 0;
+        cols = 0;
+        length = 0;
+        data = nullptr;
+    }
+
+    /**
      * Constructor for the Matrix class
      * @param rows number of rows
      * @param cols number of columns
@@ -106,11 +116,7 @@ public:
     }
 
     T sum() {
-        T sum = 0;
-        for (int i = 0; i < length; i++) {
-            sum += data[i];
-        }
-        return sum;
+        return std::accumulate(data, data + length, static_cast<T>(0));
     }
 
     ulong hash() {

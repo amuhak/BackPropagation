@@ -42,7 +42,7 @@ if (DEBUG_MODE)
     if (GPU STREQUAL "ON")
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -g -O0 -Xcompiler -rdynamic")
     endif ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -Wall -Wall -Wextra -pedantic -g -fno-inline")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -Wall -Wall -Wextra -pedantic -g -fno-inline ") #-fsanitize=address,undefined,leak
     add_compile_definitions(DEBUG)
 else ()
     if (GPU STREQUAL "ON")
@@ -66,6 +66,7 @@ if (GPU STREQUAL "ON")
             tests/matmul_unit_test.cu
             tests/matmul_unit_test.cuh
             CSV.h
+            backPropagation.h
     )
 else ()
     add_executable(BackPropagation
@@ -76,6 +77,7 @@ else ()
             tests/matmul_unit_test.cpp
             tests/matmul_unit_test.h
             CSV.h
+            backPropagation.h
     )
 endif ()
 

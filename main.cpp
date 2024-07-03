@@ -26,140 +26,12 @@ int main(int argc, char *argv[]) {
 #include <iostream>
 #include "Matrix.h"
 #include "CSV.h"
-#include <algorithm>
-#include <cmath>
-#include <tuple>
-#include <numeric>
+#include "backPropagation.h"
 #include <chrono>
 #include <iomanip>
-#include <string>
-
-Matrix<double> relu(Matrix<double> const &m) {
-    Matrix<double> result(m);
-    auto *data = result.data;
-    for (int i = 0; i < m.length; i++) {
-        data[i] = std::max(0.0, data[i]);
-    }
-    return result;
-}
-
-Matrix<double> relu_derivative(Matrix<double> const &m) {
-    Matrix<double> result(m);
-    auto *data = result.data;
-    for (int i = 0; i < m.length; i++) {
-        data[i] = data[i] > 0 ? 1 : 0;
-    }
-    return result;
-}
-
-Matrix<double> softmax(Matrix<double> const &m) {
-    Matrix<double> result(m);
-    auto *sum = new double[m.cols]{};
-    auto *data = result.data;
-    for (int i = 0; i < m.length; i++) {
-        data[i] = std::exp(data[i]);
-        sum[i % m.cols] += data[i];
-    }
-    for (int i = 0; i < m.length; i++) {
-        data[i] /= sum[i % m.cols];
-    }
-    delete[] sum;
-    return result;
-}
-
-/**
- * We are assuming that the matrix is a column matrix. This function will catastrophically fail if the matrix is
- * not a column matrix. Please make sure that the matrix is a column matrix before calling this function.
- * @param m The matrix to be converted to one hot encoding
- * @return The one hot encoded matrix
- */
-Matrix<double> one_hot(Matrix<double> const &m) {
-    int const max = (int) *std::max_element(m.data, m.data + m.length) + 1;
-    Matrix<double> ans(max, m.rows);
-    ans.fill0();
-    double *data = m.data;
-    for (int i = 0; i < m.length; i++) {
-        ans[(int) data[i]][i] = 1;
-    }
-    return ans;
-}
-
-std::tuple<Matrix<double>, Matrix<double>, Matrix<double>, Matrix<double>>
-forward_propagation(Matrix<double> &W1, Matrix<double> &b1,
-                    Matrix<double> &W2, Matrix<double> &b2,
-                    Matrix<double> &X) {
-    auto Z1 = matmult(W1, X) + b1;
-    auto A1 = relu(Z1);
-    auto Z2 = matmult(W2, A1) + b2;
-    auto A2 = softmax(Z2);
-    return {Z1, A1, Z2, A2};
-}
-
-std::tuple<Matrix<double>, double, Matrix<double>, double>
-backward_prop(Matrix<double> &Z1, Matrix<double> &A1,
-              Matrix<double> &A2,
-              Matrix<double> &W2,
-              Matrix<double> &X, Matrix<double> &Y) {
-
-    auto one_hot_Y = one_hot(Y);
-    auto dZ2 = A2 - one_hot_Y;
-    auto dW2 = matmult(dZ2, A1.t()) * (1.0 / Y.rows);
-    auto db2 = (1.0 / Y.rows) * std::accumulate(dZ2.data, dZ2.data + dZ2.length, 0.0);
-    auto der = relu_derivative(Z1);
-    auto mutl = matmult(W2.t(), dZ2);
-    auto dZ1 = mutl * der;
-    auto dW1 = matmult(dZ1, X) * (1.0 / Y.rows);
-    auto db1 = (1.0 / Y.rows) * std::accumulate(dZ1.data, dZ1.data + dZ1.length, 0.0);
-    return {dW1, db1, dW2, db2};
-}
-
-void update_params(Matrix<double> &W1, Matrix<double> &b1,
-                   Matrix<double> &W2, Matrix<double> &b2,
-                   Matrix<double> &dW1, double &db1,
-                   Matrix<double> &dW2, double &db2,
-                   double alpha) {
-    auto t = (dW1 * alpha);
-    W1 = W1 - t;
-    b1 = b1 - (db1 * alpha);
-    t = (dW2 * alpha);
-    W2 = W2 - t;
-    b2 = b2 - (db2 * alpha);
-}
-
-Matrix<double> get_predictions(Matrix<double> const &A2) {
-    Matrix<double> result(A2.cols, 1);
-    for (int i = 0; i < A2.cols; i++) {
-        double max = A2[0][i];
-        int maxLocation = 0;
-        for (int j = 1; j < A2.rows; j++) {
-            if (max < A2[j][i]) {
-                max = A2[j][i];
-                maxLocation = j;
-            }
-        }
-        result[0][i] = maxLocation;
-    }
-    return result;
-}
-
-/*
- * def get_accuracy(predictions, Y):
-    print(predictions, Y)
-    return np.sum(predictions == Y) / Y.size
- */
-
-double get_accuracy(Matrix<double> const &predictions, Matrix<double> const &Y) {
-    double sum = 0;
-    for (int i = 0; i < Y.rows; i++) {
-        if (predictions[0][i] == Y[0][i]) {
-            sum++;
-        }
-    }
-    return sum / Y.length;
-}
 
 int main() {
-    int trainLen = 60000, testLen = 10000, imgSize = 784;
+    constexpr int trainLen = 60000, testLen = 10000, imgSize = 784;
 
     Matrix<double> data = CsvToMatrix<double>("./Data/mnist_train.csv");
     Matrix<double> test_data = CsvToMatrix<double>("./Data/mnist_test.csv");
@@ -201,15 +73,18 @@ int main() {
     int const iterations = 500;
 
     auto start = std::chrono::high_resolution_clock::now();
+    std::vector<std::pair<int, int>> layers = {{784, 25},
+                                               {25, 10}};
+    backPropagation<double> bp(layers, alpha);
     auto X_train_t = X_train.t();
     for (int i = 0; i < iterations; i++) {
-        auto [Z1, A1, Z2, A2] = forward_propagation(W1, b1, W2, b2, X_train);
-        auto [dW1, db1, dW2, db2] = backward_prop(Z1, A1, A2, W2, X_train_t, Y_train);
-        update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha);
+        bp.forward_propagation(X_train);
+        bp.backward_prop(X_train_t, Y_train);
+        bp.update_params();
         if (i % 10 == 0) {
             std::cout << "Iteration: " << i << std::endl;
-            auto predictions = get_predictions(A2);
-            std::cout << "Accuracy: " << get_accuracy(predictions, Y_train) << std::endl;
+            auto predictions = bp.get_predictions();
+            std::cout << "Accuracy: " << bp.get_accuracy(predictions, Y_train) << std::endl;
             /*
             MatrixToCsv("./Data/W1_" + std::to_string(i) + "_.csv", W1);
             MatrixToCsv("./Data/b1_" + std::to_string(i) + "_.csv", b1);
