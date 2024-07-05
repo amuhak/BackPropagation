@@ -207,12 +207,10 @@ public:
         return result;
     }
 
-    double get_accuracy(Matrix<T> const &predictions, Matrix<T> const &Y) {
-        double sum = 0;
+    long double get_accuracy(Matrix<T> const &predictions, Matrix<T> const &Y) {
+        long double sum = 0;
         for (int i = 0; i < Y.rows; i++) {
-            if (predictions[0][i] == Y[0][i]) {
-                sum++;
-            }
+            sum += predictions[0][i] == Y[0][i];
         }
         return sum / Y.length;
     }

@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
 #include "backPropagation.h"
 #include <chrono>
 #include <vector>
+#include <utility>
 #include <iomanip>
 
 int main() {
@@ -75,12 +76,13 @@ int main() {
     int const iterations = 500;
 
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<std::pair<int, int>> layers = {{784, 128},
-                                               {128, 64},
-                                               {64,  10}};
+    std::vector<std::pair<int, int>> const layers = {{784, 128},
+            //  {256, 128},
+                                                     {128, 64},
+                                                     {64,  10}};
     backPropagation<double> bp(layers, alpha);
     auto X_train_t = X_train.t();
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 0; i <= iterations; i++) {
         bp.forward_propagation(X_train);
         bp.backward_prop(X_train_t, Y_train);
         bp.update_params();
@@ -88,12 +90,11 @@ int main() {
             std::cout << "Iteration: " << i << std::endl;
             auto predictions = bp.get_predictions();
             std::cout << "Accuracy: " << bp.get_accuracy(predictions, Y_train) << std::endl;
-            /*
-            MatrixToCsv("./Data/W1_" + std::to_string(i) + "_.csv", W1);
-            MatrixToCsv("./Data/b1_" + std::to_string(i) + "_.csv", b1);
-            MatrixToCsv("./Data/W2_" + std::to_string(i) + "_.csv", W2);
-            MatrixToCsv("./Data/b2_" + std::to_string(i) + "_.csv", b2);
-             */
+            if (i % 100 == 0) {
+                bp.forward_propagation(X_test);
+                predictions = bp.get_predictions();
+                std::cout << "Test Accuracy: " << bp.get_accuracy(predictions, Y_test) << std::endl;
+            }
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
