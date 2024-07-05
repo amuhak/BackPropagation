@@ -207,6 +207,33 @@ public:
         return result;
     }
 
+    Matrix<T> forward_propagation_no_update(Matrix<T> &X) {
+        // Apply relu too all layers except the last one
+        size_t i = 0;
+        Matrix<T> A_prev;
+        {
+            Matrix<T> &W = weightsAndBiases[i];
+            Matrix<T> &b = weightsAndBiases[i + 1];
+            A_prev = relu(matmult(W, X) + b);
+        }
+        i += 2;
+        for (; i < weightsAndBiases.size() - 2; i += 2) {
+            Matrix<T> &W = weightsAndBiases[i];
+            Matrix<T> &b = weightsAndBiases[i + 1];
+            A_prev = relu(matmult(W, A_prev) + b);
+        }
+
+        // Now apply softmax to the last layer
+        Matrix<T> &W = weightsAndBiases[i];
+        Matrix<T> &b = weightsAndBiases[i + 1];
+        A_prev = softmax(matmult(W, A_prev) + b);
+    }
+
+    Matrix<T> evaluate(Matrix<T> const &X) {
+        forward_propagation_no_update(X);
+        return get_predictions();
+    }
+
     long double get_accuracy(Matrix<T> const &predictions, Matrix<T> const &Y) {
         long double sum = 0;
         for (int i = 0; i < Y.rows; i++) {

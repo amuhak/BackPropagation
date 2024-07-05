@@ -90,7 +90,7 @@ int main() {
             std::cout << "Iteration: " << i << std::endl;
             auto predictions = bp.get_predictions();
             std::cout << "Accuracy: " << bp.get_accuracy(predictions, Y_train) << std::endl;
-            if (i % 100 == 0) {
+            if (i % 10 == 0) {
                 bp.forward_propagation(X_test);
                 predictions = bp.get_predictions();
                 std::cout << "Test Accuracy: " << bp.get_accuracy(predictions, Y_test) << std::endl;
