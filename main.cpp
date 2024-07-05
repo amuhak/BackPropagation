@@ -1,3 +1,4 @@
+
 #ifdef TESTING
 
 #include <iostream>
@@ -28,6 +29,7 @@ int main(int argc, char *argv[]) {
 #include "CSV.h"
 #include "backPropagation.h"
 #include <chrono>
+#include <vector>
 #include <iomanip>
 
 int main() {
