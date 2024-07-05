@@ -103,12 +103,22 @@ public:
     void forward_propagation(Matrix<T> &X) {
         // Apply relu too all layers except the last one
         size_t i = 0;
-        for (; i < weightsAndBiases.size() - 2; i += 2) {
+
+        {
             Matrix<T> &Z = activations[i];
             Matrix<T> &A = activations[i + 1];
             Matrix<T> &W = weightsAndBiases[i];
             Matrix<T> &b = weightsAndBiases[i + 1];
             Z = matmult(W, X) + b;
+            A = relu(Z);
+        }
+        i += 2;
+        for (; i < weightsAndBiases.size() - 2; i += 2) {
+            Matrix<T> &Z = activations[i];
+            Matrix<T> &A = activations[i + 1];
+            Matrix<T> &W = weightsAndBiases[i];
+            Matrix<T> &b = weightsAndBiases[i + 1];
+            Z = matmult(W, activations[i - 1]) + b;
             A = relu(Z);
         }
 
@@ -121,9 +131,9 @@ public:
         A = softmax(Z);
     }
 
-    void backward_prop(Matrix<double> &X, Matrix<double> &Y) {
+    void backward_prop(Matrix<T> &X, Matrix<T> &Y) {
 
-        auto one_hot_Y = one_hot(Y);
+        Matrix<T> one_hot_Y = one_hot(Y);
 
         Matrix<T> mult; // Needs to be passed on to the next iteration
 
@@ -149,8 +159,8 @@ public:
             Matrix<T> &dW = derivatives[i / 2].first;
             T &db = derivatives[i / 2].second;
 
-            auto der = relu_derivative(Z);
-            auto dZ = mult * der;
+            Matrix<T> der = relu_derivative(Z);
+            Matrix<T> dZ = mult * der;
             dW = matmult(dZ, activations[i - 1].t()) * (1.0 / Y.rows);
             db = (1.0 / Y.rows) * dZ.sum();
             mult = matmult(W.t(), dZ);
@@ -160,10 +170,10 @@ public:
         T &db1 = derivatives[0].second;
         Matrix<T> &dW1 = derivatives[0].first;
 
-        auto der = relu_derivative(Z1);
-        auto dZ1 = mult * der;
+        Matrix<T> der = relu_derivative(Z1);
+        Matrix<T> dZ1 = mult * der;
         dW1 = matmult(dZ1, X) * (1.0 / Y.rows);
-        db1 = (1.0 / Y.rows) * std::accumulate(dZ1.data, dZ1.data + dZ1.length, 0.0);
+        db1 = (1.0 / Y.rows) * (dZ1.sum());
     }
 
     void update_params() {

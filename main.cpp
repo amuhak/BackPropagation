@@ -73,8 +73,9 @@ int main() {
     int const iterations = 500;
 
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<std::pair<int, int>> layers = {{784, 25},
-                                               {25, 10}};
+    std::vector<std::pair<int, int>> layers = {{784, 128},
+                                               {128, 64},
+                                               {64,  10}};
     backPropagation<double> bp(layers, alpha);
     auto X_train_t = X_train.t();
     for (int i = 0; i < iterations; i++) {
