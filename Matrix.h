@@ -191,7 +191,7 @@ public:
      * @return reference to the new matrix
      */
     Matrix &operator=(const Matrix<T> &other) {
-        std::cout << "Copy assignment operator called" << std::endl;
+        // std::cout << "Copy assignment operator called" << std::endl;
         if (this == &other) {
             return *this;
         }

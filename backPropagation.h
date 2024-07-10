@@ -1,16 +1,10 @@
-//
-// Created by amuly on 7/2/2024.
-//
-
 #ifndef BACKPROPAGATION_BACKPROPAGATION_H
 #define BACKPROPAGATION_BACKPROPAGATION_H
 
-#include <iostream>
 #include "Matrix.h"
+#include <cstddef>
 #include <algorithm>
 #include <cmath>
-#include <tuple>
-#include <numeric>
 #include <vector>
 #include <utility>
 
@@ -19,13 +13,16 @@ constexpr long double RAND_RANGE_END = 0.5;
 
 template<typename T>
 class backPropagation {
-public:
-    // Matrix<T> W1, b1, W2, b2, Z1, A1, Z2, A2, dW1, dW2;
-    std::vector<Matrix<T>> weightsAndBiases;
-    std::vector<Matrix<T>> activations;
+private:
+    T alpha;
+    Matrix<T> dataT;
+    size_t no_of_layers;
+    std::vector<std::pair<Matrix<T>, Matrix<T>>> weightsAndBiases;
+    std::vector<std::pair<Matrix<T>, Matrix<T>>> activations;
     std::vector<std::pair<Matrix<T>, T>> derivatives;
-    // T db2, db1;
-    double alpha;
+    Matrix<T> InData, InAns;
+public:
+
 
     /**
      * Constructor for the backPropagation class
@@ -33,21 +30,31 @@ public:
      * In each pair, the first integer is the number input neurons and the second integer is the number of output neurons.
      * The vectors for bias will automatically be created depending on the number of output neurons.
      */
-    backPropagation(const std::vector<std::pair<int, int>> &layers, double al) : alpha(al) {
+    backPropagation(const std::vector<std::pair<int, int>> &layers, T al) : alpha(al),
+                                                                            no_of_layers(layers.size()) {
         for (const auto &[first, second]: layers) {
             Matrix<T> weight(second, first);
             Matrix<T> bias(second, 1);
             weight.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             bias.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
-            weightsAndBiases.push_back(std::move(weight));
-            weightsAndBiases.push_back(std::move(bias));
+            weightsAndBiases.emplace_back(weight, bias);
             Matrix<T> Z{};
             Matrix<T> A{};  // Filling up activations with objects of Matrix class so that they can be used later
-            activations.push_back(std::move(Z));
-            activations.push_back(std::move(A));
+            activations.emplace_back(Z, A);
             Matrix<T> d{};  // Filling up derivatives with objects of Matrix class so that they can be used later
             derivatives.emplace_back(d, static_cast<T>(0));
         }
+    }
+
+    /**
+     * Setters for the data
+     * @param X Input data
+     * @param Y Answers for the input data
+     */
+    void set_data(Matrix<T> &X, Matrix<T> const &Y) {
+        InData = X;
+        dataT = X.t();
+        InAns = Y;
     }
 
     Matrix<T> relu(Matrix<T> const &m) {
@@ -100,98 +107,84 @@ public:
         return ans;
     }
 
-    void forward_propagation(Matrix<T> &X) {
+    void forward_propagation() {
         // Apply relu too all layers except the last one
         size_t i = 0;
 
         {
-            Matrix<T> &Z = activations[i];
-            Matrix<T> &A = activations[i + 1];
-            Matrix<T> &W = weightsAndBiases[i];
-            Matrix<T> &b = weightsAndBiases[i + 1];
-            Z = matmult(W, X) + b;
+            auto &[Z, A] = activations[i];
+            auto &[W, b] = weightsAndBiases[i];
+            Z = matmult(W, InData) + b;
             A = relu(Z);
         }
-        i += 2;
-        for (; i < weightsAndBiases.size() - 2; i += 2) {
-            Matrix<T> &Z = activations[i];
-            Matrix<T> &A = activations[i + 1];
-            Matrix<T> &W = weightsAndBiases[i];
-            Matrix<T> &b = weightsAndBiases[i + 1];
-            Z = matmult(W, activations[i - 1]) + b;
+        i++;
+        for (; i < no_of_layers - 1; i++) {
+            auto &[Z, A] = activations[i];
+            auto &[W, b] = weightsAndBiases[i];
+            Z = matmult(W, activations[i - 1].second) + b;
             A = relu(Z);
         }
 
         // Now apply softmax to the last layer
-        Matrix<T> &Z = activations[i];
-        Matrix<T> &A = activations[i + 1];
-        Matrix<T> &W = weightsAndBiases[i];
-        Matrix<T> &b = weightsAndBiases[i + 1];
-        Z = matmult(W, activations[i - 1]) + b;
+        auto &[Z, A] = activations[i];
+        auto &[W, b] = weightsAndBiases[i];
+        Z = matmult(W, activations[i - 1].second) + b;
         A = softmax(Z);
     }
 
-    void backward_prop(Matrix<T> &X, Matrix<T> &Y) {
+    void backward_prop() {
 
-        Matrix<T> one_hot_Y = one_hot(Y);
+        Matrix<T> one_hot_Y = one_hot(InData);
 
         Matrix<T> mult; // Needs to be passed on to the next iteration
 
-        int i = weightsAndBiases.size() - 2;
+        size_t i = no_of_layers - 1;
 
         {
-            Matrix<T> &A = activations[i + 1];
-            Matrix<T> &dW = derivatives[i / 2].first;
-            T &db = derivatives[i / 2].second;
-            Matrix<T> &W = weightsAndBiases[i];
+            auto &[Z, A] = activations[i];
+            auto &[dW, db] = derivatives[i];
+            auto &[W, b] = weightsAndBiases[i];
 
             Matrix<T> dZ = A - one_hot_Y;
-            dW = matmult(dZ, activations[i - 1].t()) * (1.0 / Y.rows);
-            db = (1.0 / Y.rows) * dZ.sum();
+            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InData.rows);
+            db = (1.0 / InData.rows) * dZ.sum();
             mult = matmult(W.t(), dZ);
         }
 
-        i -= 2;
+        i--;
 
-        for (; i > 0; i -= 2) {
-            Matrix<T> &Z = activations[i];
-            Matrix<T> &W = weightsAndBiases[i];
-            Matrix<T> &dW = derivatives[i / 2].first;
-            T &db = derivatives[i / 2].second;
+        for (; i > 0; i--) {
+            auto &[Z, A] = activations[i];
+            auto &[dW, db] = derivatives[i];
+            auto &[W, b] = weightsAndBiases[i];
 
             Matrix<T> der = relu_derivative(Z);
             Matrix<T> dZ = mult * der;
-            dW = matmult(dZ, activations[i - 1].t()) * (1.0 / Y.rows);
-            db = (1.0 / Y.rows) * dZ.sum();
+            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InData.rows);
+            db = (1.0 / InData.rows) * dZ.sum();
             mult = matmult(W.t(), dZ);
         }
+        auto &[Z, A] = activations[0];
+        auto &[dW, db] = derivatives[0];
 
-        Matrix<T> &Z1 = activations[0];
-        T &db1 = derivatives[0].second;
-        Matrix<T> &dW1 = derivatives[0].first;
-
-        Matrix<T> der = relu_derivative(Z1);
+        Matrix<T> der = relu_derivative(Z);
         Matrix<T> dZ1 = mult * der;
-        dW1 = matmult(dZ1, X) * (1.0 / Y.rows);
-        db1 = (1.0 / Y.rows) * (dZ1.sum());
+        dW = matmult(dZ1, dataT) * (1.0 / InData.rows);
+        db = (1.0 / InData.rows) * (dZ1.sum());
     }
 
     void update_params() {
-        size_t i = 0;
-        Matrix<T> t;
-        for (; i < weightsAndBiases.size(); i += 2) {
-            Matrix<T> dW = derivatives[i / 2].first;
-            T db = derivatives[i / 2].second;
-            Matrix<T> &W = weightsAndBiases[i];
-            Matrix<T> &b = weightsAndBiases[i + 1];
-            t = (dW * alpha);
-            W = W - t;
+        for (size_t i = 0; i < no_of_layers; ++i) {
+            auto &[W, b] = weightsAndBiases[i];
+            auto &[dW, db] = derivatives[i];
+            auto temp = (dW * alpha);
+            W = W - temp;
             b = b - (db * alpha);
         }
     }
 
     Matrix<T> get_predictions() {
-        Matrix<T> &A = activations[activations.size() - 1];
+        Matrix<T> &A = activations.back().second;
         Matrix<T> result(A.cols, 1);
         for (int i = 0; i < A.cols; i++) {
             T max = A[0][i];
@@ -207,31 +200,53 @@ public:
         return result;
     }
 
-    Matrix<T> forward_propagation_no_update(Matrix<T> &X) {
-        // Apply relu too all layers except the last one
-        size_t i = 0;
-        Matrix<T> A_prev;
-        {
-            Matrix<T> &W = weightsAndBiases[i];
-            Matrix<T> &b = weightsAndBiases[i + 1];
-            A_prev = relu(matmult(W, X) + b);
+    Matrix<T> get_predictions(const Matrix<T> &A) {
+        Matrix<T> result(A.cols, 1);
+        for (int i = 0; i < A.cols; i++) {
+            T max = A[0][i];
+            int maxLocation = 0;
+            for (int j = 1; j < A.rows; j++) {
+                if (max < A[j][i]) {
+                    max = A[j][i];
+                    maxLocation = j;
+                }
+            }
+            result[0][i] = maxLocation;
         }
-        i += 2;
-        for (; i < weightsAndBiases.size() - 2; i += 2) {
-            Matrix<T> &W = weightsAndBiases[i];
-            Matrix<T> &b = weightsAndBiases[i + 1];
-            A_prev = relu(matmult(W, A_prev) + b);
-        }
-
-        // Now apply softmax to the last layer
-        Matrix<T> &W = weightsAndBiases[i];
-        Matrix<T> &b = weightsAndBiases[i + 1];
-        A_prev = softmax(matmult(W, A_prev) + b);
+        return result;
     }
 
-    Matrix<T> evaluate(Matrix<T> const &X) {
-        forward_propagation_no_update(X);
-        return get_predictions();
+    Matrix<T> forward_propagation_no_update(const Matrix<T> &X) {
+        size_t i = 0;
+        Matrix<T> last_A;
+        // Apply relu too all layers except the last one
+        {
+            auto &[W, b] = weightsAndBiases[i];
+            auto Z = matmult(W, X) + b;
+            last_A = relu(Z);
+        }
+
+        i++;
+
+        for (; i < no_of_layers - 1; i++) {
+            auto &[W, b] = weightsAndBiases[i];
+            auto Z = matmult(W, last_A) + b;
+            last_A = relu(Z);
+        }
+
+        {
+            auto &[W, b] = weightsAndBiases[i];
+            auto Z = matmult(W, last_A) + b;
+            last_A = softmax(Z);
+        }
+
+        return last_A;
+
+    }
+
+    Matrix<T> evaluate(const Matrix<T> &X) {
+        Matrix<T> A = forward_propagation_no_update(X);
+        return get_predictions(A);
     }
 
     long double get_accuracy(Matrix<T> const &predictions, Matrix<T> const &Y) {

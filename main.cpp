@@ -39,36 +39,17 @@ int main() {
     Matrix<double> data = CsvToMatrix<double>("./Data/mnist_train.csv");
     Matrix<double> test_data = CsvToMatrix<double>("./Data/mnist_test.csv");
 
-
     data = data.t();
     test_data = test_data.t();
 
-    Matrix<double> Y_train(trainLen, 1, data[0]);
+    Matrix<double> const Y_train(trainLen, 1, data[0]);
     Matrix<double> X_train(imgSize, trainLen, data[1]);
 
-    Matrix<double> Y_test(testLen, 1, test_data[0]);
+    Matrix<double> const Y_test(testLen, 1, test_data[0]);
     Matrix<double> X_test(imgSize, testLen, test_data[1]);
 
     X_train = X_train / 255.0; // Normalizing the data
     X_test = X_test / 255.0;   // Normalizing the data
-
-    Matrix<double> W1(10, 784);
-    Matrix<double> b1(10, 1);
-    Matrix<double> W2(10, 10);
-    Matrix<double> b2(10, 1);
-
-
-    W1.fillRandom(-0.5, 0.5);
-    b1.fillRandom(-0.5, 0.5);
-    W2.fillRandom(-0.5, 0.5);
-    b2.fillRandom(-0.5, 0.5);
-
-    /*
-    Matrix<double> W1 = CsvToMatrix<double>("./Data/W1.csv");
-    Matrix<double> b1 = CsvToMatrix<double>("./Data/b1.csv");
-    Matrix<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
-    Matrix<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
-    */
 
     std::cout << std::setprecision(10);
 
@@ -76,27 +57,27 @@ int main() {
     int const iterations = 500;
 
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<std::pair<int, int>> const layers = {{784, 128},
-            //  {256, 128},
-                                                     {128, 64},
-                                                     {64,  10}};
+
+    std::vector<std::pair<int, int>> const layers = {{784, 100},
+            // {128, 16},
+                                                     {100, 10}};
     backPropagation<double> bp(layers, alpha);
-    auto X_train_t = X_train.t();
+    bp.set_data(X_train, Y_train);
     for (int i = 0; i <= iterations; i++) {
-        bp.forward_propagation(X_train);
-        bp.backward_prop(X_train_t, Y_train);
+        bp.forward_propagation();
+        bp.backward_prop();
         bp.update_params();
         if (i % 10 == 0) {
             std::cout << "Iteration: " << i << std::endl;
+
             auto predictions = bp.get_predictions();
             std::cout << "Accuracy: " << bp.get_accuracy(predictions, Y_train) << std::endl;
-            if (i % 10 == 0) {
-                bp.forward_propagation(X_test);
-                predictions = bp.get_predictions();
-                std::cout << "Test Accuracy: " << bp.get_accuracy(predictions, Y_test) << std::endl;
-            }
+
+            predictions = bp.evaluate(X_test);
+            std::cout << "Test Accuracy: " << bp.get_accuracy(predictions, Y_test) << std::endl;
         }
     }
+
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "s"
               << std::endl;
