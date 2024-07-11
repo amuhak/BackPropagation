@@ -134,7 +134,7 @@ public:
 
     void backward_prop() {
 
-        Matrix<T> one_hot_Y = one_hot(InData);
+        Matrix<T> one_hot_Y = one_hot(InAns);
 
         Matrix<T> mult; // Needs to be passed on to the next iteration
 
@@ -146,8 +146,8 @@ public:
             auto &[W, b] = weightsAndBiases[i];
 
             Matrix<T> dZ = A - one_hot_Y;
-            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InData.rows);
-            db = (1.0 / InData.rows) * dZ.sum();
+            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InAns.rows);
+            db = (1.0 / InAns.rows) * dZ.sum();
             mult = matmult(W.t(), dZ);
         }
 
@@ -160,8 +160,8 @@ public:
 
             Matrix<T> der = relu_derivative(Z);
             Matrix<T> dZ = mult * der;
-            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InData.rows);
-            db = (1.0 / InData.rows) * dZ.sum();
+            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InAns.rows);
+            db = (1.0 / InAns.rows) * dZ.sum();
             mult = matmult(W.t(), dZ);
         }
         auto &[Z, A] = activations[0];
@@ -169,8 +169,8 @@ public:
 
         Matrix<T> der = relu_derivative(Z);
         Matrix<T> dZ1 = mult * der;
-        dW = matmult(dZ1, dataT) * (1.0 / InData.rows);
-        db = (1.0 / InData.rows) * (dZ1.sum());
+        dW = matmult(dZ1, dataT) * (1.0 / InAns.rows);
+        db = (1.0 / InAns.rows) * (dZ1.sum());
     }
 
     void update_params() {
