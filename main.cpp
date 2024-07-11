@@ -58,9 +58,9 @@ int main() {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::vector<std::pair<int, int>> const layers = {{784, 100},
+    std::vector<std::pair<int, int>> const layers = {{784, 10},
             // {128, 16},
-                                                     {100, 10}};
+                                                     {10,  10}};
     backPropagation<double> bp(layers, alpha);
     bp.set_data(X_train, Y_train);
     for (int i = 0; i <= iterations; i++) {
