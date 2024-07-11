@@ -33,11 +33,19 @@ public:
     backPropagation(const std::vector<std::pair<int, int>> &layers, T al) : alpha(al),
                                                                             no_of_layers(layers.size()) {
         for (const auto &[first, second]: layers) {
+            /*
             Matrix<T> weight(second, first);
             Matrix<T> bias(second, 1);
             weight.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             bias.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             weightsAndBiases.emplace_back(weight, bias);
+             */
+            Matrix<double> W1 = CsvToMatrix<double>("./Data/W1.csv");
+            Matrix<double> b1 = CsvToMatrix<double>("./Data/b1.csv");
+            Matrix<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
+            Matrix<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
+            weightsAndBiases.emplace_back(W1, b1);
+            weightsAndBiases.emplace_back(W2, b2);
             Matrix<T> Z{};
             Matrix<T> A{};  // Filling up activations with objects of Matrix class so that they can be used later
             activations.emplace_back(Z, A);
@@ -60,7 +68,7 @@ public:
     Matrix<T> relu(Matrix<T> const &m) {
         Matrix<T> result(m);
         auto *data = result.data;
-        for (int i = 0; i < m.length; i++) {
+        for (size_t i = 0; i < m.length; i++) {
             data[i] = std::max(0.0, data[i]);
         }
         return result;
@@ -69,7 +77,7 @@ public:
     Matrix<T> relu_derivative(Matrix<T> const &m) {
         Matrix<T> result(m);
         auto *data = result.data;
-        for (int i = 0; i < m.length; i++) {
+        for (size_t i = 0; i < m.length; i++) {
             data[i] = data[i] > 0 ? 1 : 0;
         }
         return result;
@@ -79,11 +87,11 @@ public:
         Matrix<T> result(m);
         auto *sum = new T[m.cols]{};
         auto *data = result.data;
-        for (int i = 0; i < m.length; i++) {
+        for (size_t i = 0; i < m.length; i++) {
             data[i] = std::exp(data[i]);
             sum[i % m.cols] += data[i];
         }
-        for (int i = 0; i < m.length; i++) {
+        for (size_t i = 0; i < m.length; i++) {
             data[i] /= sum[i % m.cols];
         }
         delete[] sum;
@@ -101,8 +109,8 @@ public:
         Matrix<T> ans(max, m.rows);
         ans.fill0();
         T *data = m.data;
-        for (int i = 0; i < m.length; i++) {
-            ans[(int) data[i]][i] = 1;
+        for (size_t i = 0; i < m.length; i++) {
+            ans[(size_t) data[i]][i] = 1;
         }
         return ans;
     }
@@ -186,10 +194,10 @@ public:
     Matrix<T> get_predictions() {
         Matrix<T> &A = activations.back().second;
         Matrix<T> result(A.cols, 1);
-        for (int i = 0; i < A.cols; i++) {
+        for (size_t i = 0; i < A.cols; i++) {
             T max = A[0][i];
             int maxLocation = 0;
-            for (int j = 1; j < A.rows; j++) {
+            for (size_t j = 1; j < A.rows; j++) {
                 if (max < A[j][i]) {
                     max = A[j][i];
                     maxLocation = j;
@@ -202,10 +210,10 @@ public:
 
     Matrix<T> get_predictions(const Matrix<T> &A) {
         Matrix<T> result(A.cols, 1);
-        for (int i = 0; i < A.cols; i++) {
+        for (size_t i = 0; i < A.cols; i++) {
             T max = A[0][i];
-            int maxLocation = 0;
-            for (int j = 1; j < A.rows; j++) {
+            size_t maxLocation = 0;
+            for (size_t j = 1; j < A.rows; j++) {
                 if (max < A[j][i]) {
                     max = A[j][i];
                     maxLocation = j;
@@ -251,7 +259,7 @@ public:
 
     long double get_accuracy(Matrix<T> const &predictions, Matrix<T> const &Y) {
         long double sum = 0;
-        for (int i = 0; i < Y.rows; i++) {
+        for (size_t i = 0; i < Y.rows; i++) {
             sum += predictions[0][i] == Y[0][i];
         }
         return sum / Y.length;
