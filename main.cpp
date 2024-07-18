@@ -34,7 +34,9 @@ int main(int argc, char *argv[]) {
 #include <iomanip>
 
 int main() {
-    constexpr int trainLen = 60000, testLen = 10000, imgSize = 784;
+    constexpr int trainLen = 60000;
+    constexpr int testLen = 10000;
+    constexpr int imgSize = 784;
 
     Matrix<double> data = CsvToMatrix<double>("./Data/mnist_train.csv");
     Matrix<double> test_data = CsvToMatrix<double>("./Data/mnist_test.csv");

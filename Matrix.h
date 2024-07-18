@@ -30,7 +30,7 @@ public:
     size_t rows{}; //NOLINT
     size_t cols{}; //NOLINT
     size_t length{}; //NOLINT
-    T *data{};    //NOLINT
+    T *data = nullptr;    //NOLINT
 
     /**
      * Initializes the matrix with the given size
@@ -41,17 +41,18 @@ public:
         this->rows = other_rows;
         this->cols = other_cols;
         this->length = other_rows * other_cols;
-        this->data = new T[length];
+        if (length == 0) {
+            data = nullptr;
+        } else {
+            this->data = new T[length];
+        }
     }
 
     /**
      * Default constructor for the Matrix class
      */
     Matrix() {
-        rows = 0;
-        cols = 0;
-        length = 0;
-        data = nullptr;
+        init(0, 0);
     }
 
     /**
@@ -84,6 +85,11 @@ public:
         set(other.data);
     }
 
+    /**
+     * Constructor for casting.
+     * @tparam U Type of other matrix
+     * @param other Other matrix
+     */
     template<class U>
     explicit Matrix(const Matrix<U> &other) {
         init(other.rows, other.cols);
@@ -92,12 +98,16 @@ public:
         }
     }
 
+    /**
+     * Move constructor
+     * @param other matrix to move from
+     */
     Matrix(Matrix &&other) {
-        this->rows = other.rows;
-        this->cols = other.cols;
-        this->length = other.length;
-        this->data = other.data;
-        other.data = nullptr;          // This is important. If we don't do this, the destructor will delete the data
+        using std::swap;
+        swap(rows, other.rows);
+        swap(cols, other.cols);
+        swap(length, other.length);
+        swap(data, other.data);
     }
 
     T sum() {
@@ -116,7 +126,7 @@ public:
      * Fills the matrix with 0s
      */
     void fill0() {
-        fill(0);
+        fill(static_cast<T>(0));
     }
 
     /**

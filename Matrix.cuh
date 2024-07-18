@@ -2,17 +2,12 @@
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
 
-#include <vector>
-
-using uint = unsigned int;
-using ulong = unsigned long;
-
 #include <cstdlib>
 #include <memory>
-#include <stdexcept>
 #include <iostream>
 #include <cuda_runtime.h>
 #include <string>
+#include <vector>
 #include <sys/types.h>
 
 #include "RandomT.h"
@@ -22,36 +17,119 @@ using ulong = unsigned long;
 #include "device_types.h"
 #include "driver_types.h"
 
-#define EPSILON 0.00001
-#define SHIFT_SIZE 1024
+constexpr long double EPSILON = 0.00001;
+constexpr size_t SHIFT_SIZE = 1024;
+cudaDeviceProp deviceProp;
+// cudaGetDeviceProperties(&deviceProp,0);
+size_t NO_OF_THREADS = deviceProp.maxThreadsPerBlock;
+size_t NO_OF_BLOCKS = deviceProp.multiProcessorCount;
+using uint = unsigned int;
+using ulong = unsigned long;
 
 template<typename T>
 class Matrix_cu {
 public:
-    int *rows;      //NOLINT
-    int rowsCPU;    //NOLINT
-    int *cols;      //NOLINT
-    int colsCPU;    //NOLINT
-    int *length;    //NOLINT
-    int lengthCPU;  //NOLINT
-    T *data;        //NOLINT
+    size_t *rows = nullptr;            //NOLINT
+    size_t rowsCPU{};                  //NOLINT
+    size_t *cols = nullptr;            //NOLINT
+    size_t colsCPU{};                  //NOLINT
+    size_t *length = nullptr;          //NOLINT
+    size_t lengthCPU{};                //NOLINT
+    T *data = nullptr;                 //NOLINT
 
-    Matrix_cu(int rows, int cols) {
-        if (rows <= 0 || cols <= 0) {
-            throw std::invalid_argument(
-                    "Invalid matrix size, rows and cols must be greater than 0. Rows: " + std::to_string(rows) +
-                    ", Cols: " + std::to_string(cols));
-        }
-        cudaMalloc(&this->rows, sizeof(int));
-        cudaMalloc(&this->cols, sizeof(int));
-        cudaMalloc(&this->length, sizeof(int));
-        cudaMemcpy(this->rows, &rows, sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(this->cols, &cols, sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(this->length, &rows, sizeof(int), cudaMemcpyHostToDevice);
+    /**
+     * Initializes the matrix with the given size
+     * @param other_rows Number of rows
+     * @param other_cols Number of columns
+     */
+    void init(size_t rows, size_t cols) {
+        cudaMalloc(&this->rows, sizeof(size_t));
+        cudaMalloc(&this->cols, sizeof(size_t));
+        cudaMalloc(&this->length, sizeof(size_t));
+        cudaMemcpy(this->rows, &rows, sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(this->cols, &cols, sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(this->length, &rows, sizeof(size_t), cudaMemcpyHostToDevice);
         this->rowsCPU = rows;
         this->colsCPU = cols;
         this->lengthCPU = rows * cols;
-        cudaMalloc(&data, lengthCPU * sizeof(T));
+        if (lengthCPU == 0) {
+            data = nullptr;
+        } else {
+            cudaMalloc(&data, lengthCPU * sizeof(T));
+        }
+    }
+
+    /**
+     * Default constructor for the Matrix class
+     */
+    Matrix_cu() {
+        init(0, 0);
+    }
+
+    /**
+     * Constructor for the Matrix class
+     * @param rows number of rows
+     * @param cols number of columns
+     */
+    Matrix_cu(size_t rows, size_t cols) {
+        init(rows, cols);
+    }
+
+    /**
+     * Constructor for the Matrix class. Copies the data from the pointer. Does not copy the pointer.
+     * You are free to delete the pointer after this.
+     * @param rows number of rows
+     * @param cols number of columns
+     * @param data pointer to the data
+     */
+    Matrix_cu(size_t rows, size_t cols, T *data) {
+        init(rows, cols);
+        set(data);
+    }
+
+    /**
+     * Copy constructor
+     * @param other matrix to copy from
+     */
+    Matrix_cu(const Matrix<T> &other) {
+        init(other.rows, other.cols);
+        set(other.data);
+    }
+
+    /**
+     * Constructor for casting.
+     * @tparam U Type of other matrix
+     * @param other Other matrix
+     */
+    template<class U>
+    explicit Matrix_cu(const Matrix<U> &other) {
+        init(other.rows, other.cols);
+        Matrix<T> temp(other);
+        cudaMemcpy(data, temp.data, sizeof(T) * temp.length, cudaMemcpyHostToDevice);
+    }
+
+    /**
+     * Move constructor
+     * @param other matrix to move from
+     */
+    Matrix_cu(Matrix_cu &&other) {
+        using std::swap;
+        swap(rows, other.rows);
+        swap(cols, other.cols);
+        swap(length, other.length);
+        swap(data, other.data);
+        swap(rowsCPU, other.rowsCPU);
+        swap(colsCPU, other.colsCPU);
+        swap(lengthCPU, other.lengthCPU);
+    }
+
+    T sum() {
+        T *dataCPU = new T[lengthCPU];
+        cudaMemcpy(dataCPU, data, lengthCPU * sizeof(T), cudaMemcpyDeviceToHost);
+        T sum = 0;
+        sum = std::accumulate(dataCPU, dataCPU + lengthCPU, sum);
+        delete[] dataCPU;
+        return sum;
     }
 
     /**
@@ -59,32 +137,36 @@ public:
      * @param value
      */
     void fill(T value) {
-        T *temp = new T[lengthCPU];
-        for (int i = 0; i < lengthCPU; i++) {
-            temp[i] = value;
-        }
-        cudaMemcpy(this->data, temp, lengthCPU * sizeof(T), cudaMemcpyHostToDevice);
-        delete[] temp;
+        T *dataCPU = new T[lengthCPU];
+        std::fill(dataCPU, dataCPU + lengthCPU, value);
+        cudaMemcpy(data, dataCPU, lengthCPU * sizeof(T), cudaMemcpyHostToDevice);
+        delete[] dataCPU;
     }
 
+    /**
+     * Fills the matrix with 0s
+     */
+    void fill0() {
+        cudaMemset(data, 0, lengthCPU * sizeof(T));
+    }
+
+    /**
+     * Sets the matrix with the given data. Copies the data from the pointer. Does not copy the pointer.
+     * You are free to delete the pointer after this.
+     * @param input pointer to the data
+     */
     void set(T *input) {
         cudaMemcpy(this->data, input, lengthCPU * sizeof(T), cudaMemcpyHostToDevice);
     }
 
-    void fill0() {
-        fill(0);
+    void set(size_t row, size_t col, T val) {
+        cudaMemcpy(data + (row * colsCPU + col), &val, sizeof(T), cudaMemcpyHostToDevice);
     }
 
-    /**
-     * Warning: This changes the data in the returned pointer will not be reflected in the matrix.
-     * Changes to the matrix will not be reflected in the pointer either.
-     * @param index
-     * @return A shared pointer to the data at the index
-     */
-    std::shared_ptr<T[]> operator[](long index) {
-        std::shared_ptr<T[]> temp(new T[colsCPU], std::default_delete<T[]>());
-        cudaMemcpy(temp.get(), data + (index * colsCPU), colsCPU * sizeof(T), cudaMemcpyDeviceToHost);
-        return temp;
+    T get(size_t row, size_t col) {
+        T val;
+        cudaMemcpy(&val, data + (row * colsCPU + col), sizeof(T), cudaMemcpyDeviceToHost);
+        return val;
     }
 
     bool operator==(const Matrix_cu<T> &other) const {
@@ -120,6 +202,48 @@ public:
         return true;
     }
 
+    /**
+     * Copy assignment operator
+     * @param other matrix to copy from
+     * @return reference to the new matrix
+     */
+    Matrix_cu &operator=(const Matrix_cu<T> &other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        if (lengthCPU != other.lengthCPU) {
+            cudaFree(data);
+            cudaMalloc(&data, other.lengthCPU * sizeof(T));
+        }
+
+        cudaMemcpy(rows, other.rows, sizeof(size_t), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(cols, other.cols, sizeof(size_t), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(length, other.length, sizeof(size_t), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(data, other.data, other.lengthCPU * sizeof(T), cudaMemcpyDeviceToDevice);
+        rowsCPU = other.rowsCPU;
+        colsCPU = other.colsCPU;
+        lengthCPU = other.lengthCPU;
+        return *this;
+    }
+
+    /**
+     * Move assignment operator
+     * @param other matrix to move from
+     * @return reference to the new matrix
+     */
+    Matrix_cu &operator=(Matrix<T> &&other) noexcept {
+        using std::swap;
+        swap(rows, other.rows);
+        swap(cols, other.cols);
+        swap(length, other.length);
+        swap(data, other.data);
+        swap(rowsCPU, other.rowsCPU);
+        swap(colsCPU, other.colsCPU);
+        swap(lengthCPU, other.lengthCPU);
+        return *this;
+    }
+
 #ifdef DEBUG_MODE
     bool operator==(const gsl_matrix &other) const {
         for (int i = 0; i < *length; i++) {
@@ -133,11 +257,55 @@ public:
     }
 #endif
 
+    Matrix_cu<T> operator/(T scalar) {
+        return forEach_new([scalar](T val) { return val / scalar; }, *this);
+    }
+
+    Matrix_cu<T> operator*(T scalar) {
+        return forEach_new([scalar](T val) { return val * scalar; }, *this);
+    }
+
+    Matrix_cu<T> operator+(T scalar) {
+        return forEach_new([scalar](T val) { return val + scalar; }, *this);
+    }
+
+    Matrix_cu<T> operator-(T scalar) {
+        return forEach_new([scalar](T val) { return val - scalar; }, *this);
+    }
+
+    Matrix<T> toCPU() {
+        T *dataCPU = new T[lengthCPU];
+        cudaMemcpy(dataCPU, data, lengthCPU * sizeof(T), cudaMemcpyDeviceToHost);
+        Matrix<T> result(rowsCPU, colsCPU, dataCPU);
+        delete[] dataCPU;
+        return result;
+    }
+
+    Matrix_cu<T> operator+(Matrix<T> &other) {
+        return Matrix_cu<T>(toCPU() + other);
+    }
+
+    Matrix_cu<T> operator-(Matrix<T> &other) {
+        return Matrix_cu<T>(toCPU() - other);
+    }
+
+    Matrix_cu<T> operator*(Matrix<T> &other) {
+        return matrix_multiply(*this, other);
+    }
+
     void fillRandom() {
-        RandomT<T> rand;
-        for (int i = 0; i < *length; i++) {
-            data[i] = rand.generate();
-        }
+        Matrix<T> temp(rowsCPU, colsCPU);
+        temp.fillRandom();
+        set(temp.data);
+    }
+
+    Matrix_cu<T> transpose() {
+        Matrix<T> temp = toCPU().transpose();
+        return Matrix_cu<T>(temp);
+    }
+
+    Matrix_cu<T> t() {
+        return transpose();
     }
 
     void print() {
@@ -163,6 +331,41 @@ public:
         cudaFree(data);
     }
 };
+
+template<typename T>
+__global__
+void forEach_internal(const std::function<void(T (T))> &func, T *data, const size_t length, const size_t shift) {
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    for (size_t i = idx; i < length; i += shift) {
+        data[i] = func(data[i]);
+    }
+}
+
+template<typename T>
+__global__
+void
+forEach_new_internal(const std::function<void(T (T))> &func, T *out, T *data, const size_t length, const size_t shift) {
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    for (size_t i = idx; i < length; i += shift) {
+        out[i] = func(data[i]);
+    }
+}
+
+template<typename T>
+void forEach(const std::function<void(T (T))> &func, Matrix_cu<T> &input) {
+    int noOfThreads = std::min(NO_OF_THREADS, input.lengthCPU);
+    int noOfBlocks = std::min(NO_OF_BLOCKS, (input.lengthCPU + noOfThreads - 1) / noOfThreads);
+    forEach_internal<<<noOfBlocks, noOfThreads>>>(func, input.data, input.lengthCPU, input.noOfThreads);
+}
+
+template<typename T>
+Matrix_cu<T> forEach_new(const std::function<void(T (T))> &func, Matrix_cu<T> &input) {
+    Matrix_cu<T> result(input.rowsCPU, input.colsCPU);
+    int noOfThreads = std::min(NO_OF_THREADS, input.lengthCPU);
+    int noOfBlocks = std::min(NO_OF_BLOCKS, (input.lengthCPU + noOfThreads - 1) / noOfThreads);
+    forEach_new_internal<<<noOfBlocks, noOfThreads>>>(func, result.data, input.data, input.lengthCPU,
+                                                      input.noOfThreads);
+}
 
 template<typename T, typename U, typename V>
 __global__
@@ -203,8 +406,8 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     int streamIdx = 0;
     for (int i = 0; i <= shiftDown; i++) {
         for (int j = 0; j <= shiftRight; j++) {
-            int blockSize = min(SHIFT_SIZE, a.rowsCPU - i * SHIFT_SIZE);
-            int noOfThreads = min(SHIFT_SIZE, b.colsCPU - j * SHIFT_SIZE);
+            int blockSize = std::min(SHIFT_SIZE, a.rowsCPU - i * SHIFT_SIZE);
+            int noOfThreads = std::min(SHIFT_SIZE, b.colsCPU - j * SHIFT_SIZE);
             noOfThreads = max(1, noOfThreads);
 
             matrix_multiply_internal_cu<<<blockSize, noOfThreads, 0, streams[streamIdx]>>>(

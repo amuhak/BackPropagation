@@ -33,19 +33,19 @@ public:
     backPropagation(const std::vector<std::pair<int, int>> &layers, T al) : alpha(al),
                                                                             no_of_layers(layers.size()) {
         for (const auto &[first, second]: layers) {
-            /*
             Matrix<T> weight(second, first);
             Matrix<T> bias(second, 1);
             weight.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             bias.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             weightsAndBiases.emplace_back(weight, bias);
-             */
-            Matrix<double> W1 = CsvToMatrix<double>("./Data/W1.csv");
-            Matrix<double> b1 = CsvToMatrix<double>("./Data/b1.csv");
-            Matrix<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
-            Matrix<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
+            /*
+           Matrix<double> W1 = CsvToMatrix<double>("./Data/W1.csv");
+           Matrix<double> b1 = CsvToMatrix<double>("./Data/b1.csv");
+           Matrix<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
+           Matrix<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
             weightsAndBiases.emplace_back(W1, b1);
             weightsAndBiases.emplace_back(W2, b2);
+             */
             Matrix<T> Z{};
             Matrix<T> A{};  // Filling up activations with objects of Matrix class so that they can be used later
             activations.emplace_back(Z, A);

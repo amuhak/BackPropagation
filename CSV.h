@@ -68,8 +68,9 @@ Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol 
 }
 
 template<typename T>
-void MatrixToCsv(const std::string &filename, const Matrix<T> &matrix, const char &delimiter = ',') {
+void MatrixToCsv(const std::string &filename, const Matrix<T> &matrix, int precision = 6, const char &delimiter = ',') {
     std::ofstream file(filename);
+    file.precision(precision);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file");
     }
