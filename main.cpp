@@ -1,18 +1,21 @@
 
 #include <cstddef>
+#include <sstream>
+
 #ifdef TESTING
 
 #include <iostream>
-#include <cstdlib>
+#include <c++/13/sstream>
 #include "tests/matmul_unit_test.h"
 
 int main(int argc, char *argv[]) {
     std::cout << "Pass the size of the matrix as an comand line argument to the program" << std::endl;
-    int no = (1U << 11U) + 1;
+    size_t no = (1U << 11U) + 1;
     if (argc < 2) {
         std::cout << "Using default size of matrix: " << no << std::endl;
     } else {
-        no = std::atoi(argv[1]);
+        std::stringstream ss(argv[1]);
+        ss >> no;
         std::cout << "Using size of matrix: " << no << std::endl;
     }
     std::cout << std::boolalpha;

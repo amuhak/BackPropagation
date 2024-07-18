@@ -28,9 +28,8 @@ bool eq(double *a, double *b, size_t len) {
     return true;
 }
 
-bool matmul_unit_test(int no) {
+bool matmul_unit_test(size_t n) {
     RandomT<double> r;
-    const ulong n = no;
 
     auto *a = new double[n * n];
     auto *b = new double[n * n];
