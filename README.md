@@ -1,6 +1,6 @@
-# BackPropagation
+# Back propagation
 
-A backpropagation implementation in C++ with CUDA support, and no external dependencies (except for the debugging
+A back propagation implementation in C++ with CUDA support, and no external dependencies (except for the debugging
 build).
 
 To run the debugging build, you will need to have the following dependencies:
@@ -27,9 +27,9 @@ cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=<Debug or Release> -DGPU=<ON OR OFF> -DT
 cmake --build . --target BackPropagation --config <Debug or Release>
 ```
 
-For example, my nvcc is located at `/usr/local/cuda/bin/nvcc`.
+A popular location of nvcc is: `/usr/local/cuda/bin/nvcc`.
 
-So if I want a build with the GPU without optimizations (debug mode), I would run:
+So if you want a build with the GPU without optimizations (debug mode), you would run:
 
 ```bash
 cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=Debug -DGPU=ON -DTESTING=OFF -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc

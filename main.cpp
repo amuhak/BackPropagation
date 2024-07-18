@@ -1,4 +1,5 @@
 
+#include <cstddef>
 #ifdef TESTING
 
 #include <iostream>
@@ -60,7 +61,7 @@ int main() {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::vector<std::pair<int, int>> const layers = {{784, 10},
+    std::vector<std::pair<size_t, size_t>> const layers = {{784, 10},
             // {128, 16},
                                                      {10,  10}};
     backPropagation<double> bp(layers, alpha);

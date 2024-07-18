@@ -3,6 +3,7 @@
 #define BACKPROPAGATION_MATRIX_H
 
 #include <algorithm>
+#include <cstdlib>
 #include <stdexcept>
 #include <iostream>
 #include <string>
@@ -102,7 +103,7 @@ public:
      * Move constructor
      * @param other matrix to move from
      */
-    Matrix(Matrix &&other) {
+    Matrix(Matrix &&other) noexcept {
         using std::swap;
         swap(rows, other.rows);
         swap(cols, other.cols);

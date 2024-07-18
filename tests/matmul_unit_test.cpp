@@ -6,7 +6,6 @@
 #include <iomanip>
 #include "../RandomT.h"
 #include "../Matrix.h"
-#include "matmul_unit_test.h"
 
 #ifdef DEBUG
 
@@ -16,9 +15,8 @@
 
 #endif
 
-bool eq(double *a, double *b, int len) {
-    const auto relative_difference_factor = 0.000001;
-    for (int i = 0; i < len; i++) {
+bool eq(double *a, double *b, size_t len) {
+    for (size_t i = 0; i < len; i++) {
         auto max = std::max(std::abs(a[i]), std::abs(b[i]));
         if ((std::abs(a[i]) - std::abs(b[i]) > max * relative_difference_factor)) {
             std::cout << a[i] - b[i] << std::endl << max << std::endl;
@@ -30,10 +28,9 @@ bool eq(double *a, double *b, int len) {
     return true;
 }
 
-bool matmul_unit_test(int no) {
+bool matmul_unit_test(size_t n) {
     std::cout << std::setprecision(12);
     RandomT<double> r;
-    const ulong n = no;
 
     auto *a = new double[n * n];
     auto *b = new double[n * n];
@@ -50,11 +47,11 @@ bool matmul_unit_test(int no) {
     auto start = std::chrono::high_resolution_clock::now();
     auto ans = matrix_multiply(m1, m2);
     auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::chrono::duration<double> const elapsed_seconds = end - start;
     auto start_parallel = std::chrono::high_resolution_clock::now();
     auto ans_parallel = matrix_multiply_parallel(m1, m2);
     auto end_parallel = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds_parallel = end_parallel - start_parallel;
+    std::chrono::duration<double> const elapsed_seconds_parallel = end_parallel - start_parallel;
 
 #ifdef DEBUG
     gsl_matrix_view const A = gsl_matrix_view_array(a, n, n);
@@ -65,7 +62,7 @@ bool matmul_unit_test(int no) {
                    1.0, &A.matrix, &B.matrix,
                    0.0, &C.matrix);
     auto end_gsl = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds_gsl = end_gsl - start_gsl;
+    std::chrono::duration<double> const elapsed_seconds_gsl = end_gsl - start_gsl;
 #endif
 
     bool correct;

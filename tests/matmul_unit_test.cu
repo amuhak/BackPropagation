@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <chrono>
-#include <sys/types.h>
 #include "../RandomT.h"
 #include "../Matrix.cuh"
 #include "../Matrix.h"
@@ -16,8 +15,7 @@
 
 #endif
 
-bool eq(double *a, double *b, int len) {
-    const auto relative_difference_factor = 0.000001;
+bool eq(double *a, double *b, size_t len) {
     for (int i = 0; i < len; i++) {
         auto max = std::max(std::abs(a[i]), std::abs(b[i]));
         if ((std::abs(a[i]) - std::abs(b[i]) > max * relative_difference_factor)) {
@@ -49,7 +47,7 @@ bool matmul_unit_test(int no) {
     auto start_time_parallel = std::chrono::high_resolution_clock::now();
     auto ans_parallel = matrix_multiply_parallel(m1, m2);
     auto end_time_parallel = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_time_parallel = end_time_parallel - start_time_parallel;
+    std::chrono::duration<double> const elapsed_time_parallel = end_time_parallel - start_time_parallel;
 
     Matrix_cu<double> c1(n, n);
     c1.set(a);
@@ -58,7 +56,7 @@ bool matmul_unit_test(int no) {
     auto start_time_cu = std::chrono::high_resolution_clock::now();
     auto ans = matrix_multiply(c1, c2);
     auto end_time_cu = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_time_cu = end_time_cu - start_time_cu;
+    std::chrono::duration<double> const elapsed_time_cu = end_time_cu - start_time_cu;
 
 #ifdef DEBUG
     gsl_matrix_view const A = gsl_matrix_view_array(a, n, n);
@@ -69,7 +67,7 @@ bool matmul_unit_test(int no) {
                    1.0, &A.matrix, &B.matrix,
                    0.0, &C.matrix);
     auto end_time_gsl = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_time_gsl = end_time_gsl - start_time_gsl;
+    std::chrono::duration<double> const elapsed_time_gsl = end_time_gsl - start_time_gsl;
 #endif
 
     bool correct;

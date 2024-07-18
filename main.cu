@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #ifdef TESTING
 
@@ -14,7 +15,7 @@ int main(int argc, char *argv[]) {
     if (argc < 2) {
         std::cout << "Using default size of matrix: " << no << std::endl;
     } else {
-        no = std::atoi(argv[1]);
+        no = std::stoi(argv[1]);
         std::cout << "Using size of matrix: " << no << std::endl;
     }
     std::cout << std::boolalpha;

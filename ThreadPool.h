@@ -48,15 +48,21 @@ public:
     }
 
     bool busy() {
-        bool poolbusy;
+        bool pool_busy;
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
-            poolbusy = !jobs.empty();
+            std::unique_lock<std::mutex> const lock(queue_mutex);
+            pool_busy = !jobs.empty();
         }
-        return poolbusy;
+        return pool_busy;
     }
 
 private:
+    bool should_terminate{false};           // Tells threads to stop looking for jobs
+    std::mutex queue_mutex;                  // Prevents data races to the job queue
+    std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination
+    std::vector<std::thread> threads;
+    std::queue<std::function<void()>> jobs;
+
     void ThreadLoop() {
         while (true) {
             std::function<void()> job;
@@ -74,12 +80,6 @@ private:
             job();
         }
     }
-
-    bool should_terminate = false;           // Tells threads to stop looking for jobs
-    std::mutex queue_mutex;                  // Prevents data races to the job queue
-    std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination
-    std::vector<std::thread> threads;
-    std::queue<std::function<void()>> jobs;
 };
 
 #endif //BACKPROPAGATION_THREADPOOL_H

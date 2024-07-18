@@ -1,7 +1,3 @@
-//
-// Created by amuly on 4/7/2024.
-//
-
 #ifndef BACKPROPAGATION_RANDOMT_H
 #define BACKPROPAGATION_RANDOMT_H
 

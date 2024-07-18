@@ -42,16 +42,16 @@ public:
      * @param other_rows Number of rows
      * @param other_cols Number of columns
      */
-    void init(size_t rows, size_t cols) {
+    void init(size_t rows_, size_t cols_) {
         cudaMalloc(&this->rows, sizeof(size_t));
         cudaMalloc(&this->cols, sizeof(size_t));
         cudaMalloc(&this->length, sizeof(size_t));
-        cudaMemcpy(this->rows, &rows, sizeof(size_t), cudaMemcpyHostToDevice);
-        cudaMemcpy(this->cols, &cols, sizeof(size_t), cudaMemcpyHostToDevice);
-        cudaMemcpy(this->length, &rows, sizeof(size_t), cudaMemcpyHostToDevice);
-        this->rowsCPU = rows;
-        this->colsCPU = cols;
-        this->lengthCPU = rows * cols;
+        cudaMemcpy(this->rows, &rows_, sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(this->cols, &cols_, sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(this->length, &rows_, sizeof(size_t), cudaMemcpyHostToDevice);
+        this->rowsCPU = rows_;
+        this->colsCPU = cols_;
+        this->lengthCPU = rows_ * cols_;
         if (lengthCPU == 0) {
             data = nullptr;
         } else {

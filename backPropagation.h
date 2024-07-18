@@ -30,8 +30,8 @@ public:
      * In each pair, the first integer is the number input neurons and the second integer is the number of output neurons.
      * The vectors for bias will automatically be created depending on the number of output neurons.
      */
-    backPropagation(const std::vector<std::pair<int, int>> &layers, T al) : alpha(al),
-                                                                            no_of_layers(layers.size()) {
+    backPropagation(const std::vector<std::pair<size_t, size_t>> &layers, T al) : alpha(al),
+                                                                                  no_of_layers(layers.size()) {
         for (const auto &[first, second]: layers) {
             Matrix<T> weight(second, first);
             Matrix<T> bias(second, 1);
@@ -105,7 +105,7 @@ public:
  * @return The one hot encoded matrix
  */
     Matrix<T> one_hot(Matrix<T> const &m) {
-        int const max = (int) *std::max_element(m.data, m.data + m.length) + 1;
+        const size_t max = (size_t) *std::max_element(m.data, m.data + m.length) + 1;
         Matrix<T> ans(max, m.rows);
         ans.fill0();
         T *data = m.data;
@@ -142,9 +142,9 @@ public:
 
     void backward_prop() {
 
-        Matrix<T> one_hot_Y = one_hot(InAns);
+        Matrix<T> hot = one_hot(InAns);
 
-        Matrix<T> mult; // Needs to be passed on to the next iteration
+        Matrix<T> product; // Needs to be passed on to the next iteration
 
         size_t i = no_of_layers - 1;
 
@@ -153,10 +153,10 @@ public:
             auto &[dW, db] = derivatives[i];
             auto &[W, b] = weightsAndBiases[i];
 
-            Matrix<T> dZ = A - one_hot_Y;
-            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InAns.rows);
-            db = (1.0 / InAns.rows) * dZ.sum();
-            mult = matmult(W.t(), dZ);
+            Matrix<T> dZ = A - hot;
+            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / (double) InAns.rows);
+            db = (1.0 / (double) InAns.rows) * dZ.sum();
+            product = matmult(W.t(), dZ);
         }
 
         i--;
@@ -167,18 +167,18 @@ public:
             auto &[W, b] = weightsAndBiases[i];
 
             Matrix<T> der = relu_derivative(Z);
-            Matrix<T> dZ = mult * der;
-            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / InAns.rows);
-            db = (1.0 / InAns.rows) * dZ.sum();
-            mult = matmult(W.t(), dZ);
+            Matrix<T> dZ = product * der;
+            dW = matmult(dZ, activations[i - 1].second.t()) * (1.0 / (double) InAns.rows);
+            db = (1.0 / (double) InAns.rows) * dZ.sum();
+            product = matmult(W.t(), dZ);
         }
         auto &[Z, A] = activations[0];
         auto &[dW, db] = derivatives[0];
 
         Matrix<T> der = relu_derivative(Z);
-        Matrix<T> dZ1 = mult * der;
-        dW = matmult(dZ1, dataT) * (1.0 / InAns.rows);
-        db = (1.0 / InAns.rows) * (dZ1.sum());
+        Matrix<T> dZ1 = product * der;
+        dW = matmult(dZ1, dataT) * (1.0 / (double) InAns.rows);
+        db = (1.0 / (double) InAns.rows) * (dZ1.sum());
     }
 
     void update_params() {
@@ -196,14 +196,14 @@ public:
         Matrix<T> result(A.cols, 1);
         for (size_t i = 0; i < A.cols; i++) {
             T max = A[0][i];
-            int maxLocation = 0;
+            size_t maxLocation = 0;
             for (size_t j = 1; j < A.rows; j++) {
                 if (max < A[j][i]) {
                     max = A[j][i];
                     maxLocation = j;
                 }
             }
-            result[0][i] = maxLocation;
+            result[0][i] = (T) maxLocation;
         }
         return result;
     }
@@ -219,7 +219,7 @@ public:
                     maxLocation = j;
                 }
             }
-            result[0][i] = maxLocation;
+            result[0][i] = (T) maxLocation;
         }
         return result;
     }
