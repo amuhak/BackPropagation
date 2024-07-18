@@ -5,7 +5,7 @@
 #ifdef TESTING
 
 #include <iostream>
-#include <c++/13/sstream>
+#include <sstream>
 #include "tests/matmul_unit_test.h"
 
 int main(int argc, char *argv[]) {

@@ -5,7 +5,7 @@
 
 #include "tests/matmul_unit_test.h"
 #include <cstdlib>
-#include <c++/13/sstream>
+#include <sstream>
 
 using uint = unsigned int;
 using ulong = unsigned long;
