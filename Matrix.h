@@ -509,8 +509,8 @@ T matrix_multiply_internal(const Matrix<T> *a, const Matrix<T> *b, long x, long 
 template<typename T>
 Matrix<T> matmult(const Matrix<T> &a, const Matrix<T> &b) {
 
-    ulong const threshold = THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL;
-    ulong const num_multiplications = a.rows * a.cols * b.cols;
+    uint64_t const threshold = THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL * THRESHOLD_TO_USE_PARALLEL;
+    uint64_t const num_multiplications = a.rows * a.cols * b.cols;
 
     if (num_multiplications > threshold) {
         return matrix_multiply_parallel(a, b);

@@ -35,7 +35,7 @@ bool matmul_unit_test(size_t n) {
     auto *b = new double[n * n];
     auto *c = new double[n * n]{};
 
-    for (uint i = 0; i < n * n; i++) {
+    for (size_t i = 0; i < n * n; i++) {
         a[i] = r.generate();
         b[i] = r.generate();
     }

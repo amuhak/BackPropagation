@@ -19,7 +19,7 @@ size_t NO_OF_THREADS{};
 size_t NO_OF_BLOCKS{};
 size_t *NO_OF_THREADS_GPU{};
 size_t *NO_OF_BLOCKS_GPU{};
-using uint = unsigned int;
+using uint32_t = unsigned int;
 using ulong = unsigned long;
 
 template<typename T>
@@ -375,8 +375,8 @@ Matrix_cu<T> forEach_new(const std::function<void(T (T))> &func, Matrix_cu<T> &i
 template<typename T, typename U, typename V>
 __global__
 void
-matrix_multiply_internal_cu(T *__restrict__ a, uint aCols,
-                            U *__restrict__ b, uint bCols,
+matrix_multiply_internal_cu(T *__restrict__ a, uint32_t aCols,
+                            U *__restrict__ b, uint32_t bCols,
                             V *__restrict__ c,
                             uint16_t block = 0, uint16_t threads = 0,
                             uint16_t shiftDown = 0, uint16_t shiftRight = 0) {
@@ -384,10 +384,10 @@ matrix_multiply_internal_cu(T *__restrict__ a, uint aCols,
 
     shiftDown *= (block);
     shiftRight *= (threads);
-    const uint x = blockIdx.x + shiftDown;
-    const uint y = threadIdx.x + shiftRight;
+    const uint32_t x = blockIdx.x + shiftDown;
+    const uint32_t y = threadIdx.x + shiftRight;
 
-    for (uint i = 0; i < aCols; i++) {
+    for (uint32_t i = 0; i < aCols; i++) {
         ans += a[x * aCols + i] * b[i * bCols + y];
     }
 
@@ -410,9 +410,9 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     std::cout << "NO_OF_THREADS " << NO_OF_THREADS << " NO_OF_BLOCKS " << NO_OF_BLOCKS << std::endl;
 
     Matrix_cu<decltype(T{} * U{})> result(a.rowsCPU, b.colsCPU);
-    const uint shiftDown = (result.rowsCPU - 1) / (NO_OF_BLOCKS);
-    const uint shiftRight = (result.colsCPU - 1) / (NO_OF_THREADS);
-    const uint totalStreams = (shiftDown + 1) * (shiftRight + 1);
+    const uint32_t shiftDown = (result.rowsCPU - 1) / (NO_OF_BLOCKS);
+    const uint32_t shiftRight = (result.colsCPU - 1) / (NO_OF_THREADS);
+    const uint32_t totalStreams = (shiftDown + 1) * (shiftRight + 1);
     std::vector<cudaStream_t> streams(totalStreams);
 
     for (auto &i: streams) {
@@ -425,8 +425,8 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     size_t streamIdx = 0;
     for (uint16_t i = 0; i <= shiftDown; i++) {
         for (uint16_t j = 0; j <= shiftRight; j++) {
-            uint blockSize = std::min(NO_OF_BLOCKS, a.rowsCPU - i * NO_OF_BLOCKS);
-            uint noOfThreads = std::min(NO_OF_THREADS, b.colsCPU - j * NO_OF_THREADS);
+            uint32_t blockSize = std::min(NO_OF_BLOCKS, a.rowsCPU - i * NO_OF_BLOCKS);
+            uint32_t noOfThreads = std::min(NO_OF_THREADS, b.colsCPU - j * NO_OF_THREADS);
             noOfThreads = max(1, noOfThreads);
 
             matrix_multiply_internal_cu<<<blockSize, noOfThreads, 0, streams[streamIdx]>>>(

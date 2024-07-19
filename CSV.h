@@ -59,8 +59,8 @@ Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol 
     }
 
     Matrix<T> matrix(data.size(), data[0].size());
-    for (uint i = 0; i < data.size(); ++i) {
-        for (uint j = 0; j < data[i].size(); ++j) {
+    for (size_t i = 0; i < data.size(); ++i) {
+        for (size_t j = 0; j < data[i].size(); ++j) {
             matrix[i][j] = data[i][j];
         }
     }

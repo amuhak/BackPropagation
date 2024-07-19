@@ -6,6 +6,7 @@
 #ifndef BACKPROPAGATION_THREADPOOL_H
 #define BACKPROPAGATION_THREADPOOL_H
 
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -18,8 +19,8 @@
 class ThreadPool {
 public:
     void Start() {
-        const uint num_threads = std::thread::hardware_concurrency(); // Max # of threads the system supports
-        for (uint ii = 0; ii < num_threads; ++ii) {
+        const uint32_t num_threads = std::thread::hardware_concurrency(); // Max # of threads the system supports
+        for (uint32_t ii = 0; ii < num_threads; ++ii) {
             threads.emplace_back(&ThreadPool::ThreadLoop, this);
         }
     }
