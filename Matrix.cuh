@@ -3,14 +3,10 @@
 #define BACKPROPAGATION_MATRIX_CUH
 
 #include <cstdlib>
-#include <memory>
 #include <iostream>
 #include <cuda_runtime.h>
-#include <string>
 #include <vector>
 #include <sys/types.h>
-
-#include "RandomT.h"
 #include "Matrix.h"
 #include "cuda_runtime_api.h"
 #include "device_launch_parameters.h"
@@ -19,10 +15,10 @@
 
 constexpr long double EPSILON = 0.00001;
 constexpr size_t SHIFT_SIZE = 1024;
-cudaDeviceProp deviceProp;
-// cudaGetDeviceProperties(&deviceProp,0);
-size_t NO_OF_THREADS = deviceProp.maxThreadsPerBlock;
-size_t NO_OF_BLOCKS = deviceProp.multiProcessorCount;
+size_t NO_OF_THREADS{};
+size_t NO_OF_BLOCKS{};
+size_t *NO_OF_THREADS_GPU{};
+size_t *NO_OF_BLOCKS_GPU{};
 using uint = unsigned int;
 using ulong = unsigned long;
 
@@ -57,6 +53,15 @@ public:
         } else {
             cudaMalloc(&data, lengthCPU * sizeof(T));
         }
+        cudaGetDevice(0);
+        cudaDeviceProp deviceProp{};
+        cudaGetDeviceProperties(&deviceProp, 0);
+        NO_OF_THREADS = deviceProp.maxThreadsPerBlock;
+        NO_OF_BLOCKS = deviceProp.maxThreadsDim[0];
+        cudaMalloc(&NO_OF_THREADS_GPU, sizeof(size_t));
+        cudaMalloc(&NO_OF_BLOCKS_GPU, sizeof(size_t));
+        cudaMemcpy(NO_OF_THREADS_GPU, &NO_OF_THREADS, sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaMemcpy(NO_OF_BLOCKS_GPU, &NO_OF_BLOCKS, sizeof(size_t), cudaMemcpyHostToDevice);
     }
 
     /**
@@ -190,7 +195,7 @@ public:
         }
         T *dataCPU = new T[lengthCPU];
         cudaMemcpy(dataCPU, data, lengthCPU * sizeof(T), cudaMemcpyDeviceToHost);
-        for (int i = 0; i < lengthCPU; i++) {
+        for (size_t i = 0; i < lengthCPU; i++) {
             auto acceptableError = std::abs(dataCPU[i] * EPSILON);
             if (std::abs(dataCPU[i] - other.data[i]) > acceptableError) {
                 std::cout << "Mismatch at index: " << i << " Expected: " << other.data[i] << " Got: " << dataCPU[i]
@@ -370,59 +375,74 @@ Matrix_cu<T> forEach_new(const std::function<void(T (T))> &func, Matrix_cu<T> &i
 template<typename T, typename U, typename V>
 __global__
 void
-matrix_multiply_internal_cu(T *a, uint aCols, U *b, uint bCols, V *c, uint cCols, uint shiftDown = 0,
-                            uint shiftRight = 0) {
-    decltype(T{} * U{}) ans = 0; // Auto doesn't work here for some reason
-    shiftDown *= SHIFT_SIZE;
-    shiftRight *= SHIFT_SIZE;
-    uint const x = blockIdx.x + shiftDown;
-    uint const y = threadIdx.x + shiftRight;
+matrix_multiply_internal_cu(T *__restrict__ a, uint aCols,
+                            U *__restrict__ b, uint bCols,
+                            V *__restrict__ c,
+                            uint16_t block = 0, uint16_t threads = 0,
+                            uint16_t shiftDown = 0, uint16_t shiftRight = 0) {
+    decltype(T{} * U{}) ans = 0;      // auto may not give you the right type here
+
+    shiftDown *= (block);
+    shiftRight *= (threads);
+    const uint x = blockIdx.x + shiftDown;
+    const uint y = threadIdx.x + shiftRight;
+
     for (uint i = 0; i < aCols; i++) {
         ans += a[x * aCols + i] * b[i * bCols + y];
     }
-    c[x * cCols + y] = ans;
+
+    c[x * bCols + y] = ans;       // bCols == cCols
 }
 
 template<typename T, typename U>
 auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     if (a.colsCPU != b.rowsCPU) {
-        std::cout << "Matrix dimensions do not match." +
-                     std::to_string(a.rowsCPU) + "x" + std::to_string(a.colsCPU) + " and " +
-                     std::to_string(b.rowsCPU) + "x" + std::to_string(b.colsCPU) + " respectively.";
+        std::cout << "Matrix dimensions do not match. " << a.rowsCPU << " x " << a.colsCPU << " and " << b.rowsCPU
+                  << " x " << b.colsCPU << " respectively.";
         exit(-69);
     }
-    Matrix_cu<T> result(a.rowsCPU, b.colsCPU);
-    const int shiftDown = (a.rowsCPU - 1) / (SHIFT_SIZE);
-    const int shiftRight = (b.colsCPU - 1) / (SHIFT_SIZE);
 
-    int totalStreams = (shiftDown + 1) * (shiftRight + 1);
+    /*
+     * size_t NO_OF_THREADS{};
+     * size_t NO_OF_BLOCKS{};
+     */
 
+    std::cout << "NO_OF_THREADS " << NO_OF_THREADS << " NO_OF_BLOCKS " << NO_OF_BLOCKS << std::endl;
+
+    Matrix_cu<decltype(T{} * U{})> result(a.rowsCPU, b.colsCPU);
+    const uint shiftDown = (result.rowsCPU - 1) / (NO_OF_BLOCKS);
+    const uint shiftRight = (result.colsCPU - 1) / (NO_OF_THREADS);
+    const uint totalStreams = (shiftDown + 1) * (shiftRight + 1);
     std::vector<cudaStream_t> streams(totalStreams);
 
-    for (int i = 0; i < totalStreams; i++) {
-        cudaStreamCreate(&streams[i]);
+    for (auto &i: streams) {
+        cudaStreamCreate(&i);
     }
+
+    // Prefer L1 cache over shared memory (because we are not using shared memory)
     cudaFuncSetCacheConfig(matrix_multiply_internal_cu<T, U, decltype(T{} * U{})>, cudaFuncCachePreferL1);
-    int streamIdx = 0;
-    for (int i = 0; i <= shiftDown; i++) {
-        for (int j = 0; j <= shiftRight; j++) {
-            int blockSize = std::min(SHIFT_SIZE, a.rowsCPU - i * SHIFT_SIZE);
-            int noOfThreads = std::min(SHIFT_SIZE, b.colsCPU - j * SHIFT_SIZE);
+
+    size_t streamIdx = 0;
+    for (uint16_t i = 0; i <= shiftDown; i++) {
+        for (uint16_t j = 0; j <= shiftRight; j++) {
+            uint blockSize = std::min(NO_OF_BLOCKS, a.rowsCPU - i * NO_OF_BLOCKS);
+            uint noOfThreads = std::min(NO_OF_THREADS, b.colsCPU - j * NO_OF_THREADS);
             noOfThreads = max(1, noOfThreads);
 
             matrix_multiply_internal_cu<<<blockSize, noOfThreads, 0, streams[streamIdx]>>>(
                     a.data, a.colsCPU,
                     b.data, b.colsCPU,
-                    result.data, result.colsCPU,
+                    result.data,
+                    NO_OF_BLOCKS, NO_OF_THREADS,
                     i, j);
 
             streamIdx++;
         }
     }
 
-    for (int i = 0; i < totalStreams; ++i) {
-        cudaStreamSynchronize(streams[i]);
-        cudaStreamDestroy(streams[i]);
+    for (auto &i: streams) {
+        cudaStreamSynchronize(i);
+        cudaStreamDestroy(i);
     }
 
     return result;

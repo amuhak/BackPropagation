@@ -1,7 +1,3 @@
-
-#include <cstddef>
-#include <sstream>
-
 #ifdef TESTING
 
 #include <iostream>
@@ -36,6 +32,7 @@ int main(int argc, char *argv[]) {
 #include <vector>
 #include <utility>
 #include <iomanip>
+#include <cstddef>
 
 int main() {
     constexpr int trainLen = 60000;
@@ -66,7 +63,7 @@ int main() {
 
     std::vector<std::pair<size_t, size_t>> const layers = {{784, 10},
             // {128, 16},
-                                                     {10,  10}};
+                                                           {10,  10}};
     backPropagation<double> bp(layers, alpha);
     bp.set_data(X_train, Y_train);
     for (int i = 0; i <= iterations; i++) {

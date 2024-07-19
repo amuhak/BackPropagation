@@ -16,7 +16,7 @@
 #endif
 
 bool eq(double *a, double *b, size_t len) {
-    for (int i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         auto max = std::max(std::abs(a[i]), std::abs(b[i]));
         if ((std::abs(a[i]) - std::abs(b[i]) > max * relative_difference_factor)) {
             std::cout << a[i] - b[i] << std::endl << max << std::endl;
