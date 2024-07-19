@@ -9,7 +9,7 @@
 #include <string>
 #include <thread>
 #include <cstddef>
-#include <sys/types.h>
+#include <numeric>
 #include "RandomT.h"
 #include "ThreadPool.h"
 
