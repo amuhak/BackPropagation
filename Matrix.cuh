@@ -2,11 +2,11 @@
 #ifndef BACKPROPAGATION_MATRIX_CUH
 #define BACKPROPAGATION_MATRIX_CUH
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <cuda_runtime.h>
 #include <vector>
-#include <sys/types.h>
 #include "Matrix.h"
 #include "cuda_runtime_api.h"
 #include "device_launch_parameters.h"
@@ -14,13 +14,21 @@
 #include "driver_types.h"
 
 constexpr long double EPSILON = 0.00001;
-constexpr size_t SHIFT_SIZE = 1024;
-size_t NO_OF_THREADS{};
-size_t NO_OF_BLOCKS{};
-size_t *NO_OF_THREADS_GPU{};
-size_t *NO_OF_BLOCKS_GPU{};
-using uint32_t = unsigned int;
-using ulong = unsigned long;
+
+template<typename T>
+__global__  void div_kernel(T *out, T *data, T div, size_t length, size_t shift);
+
+template<typename T>
+__global__  void mult_kernel(T *out, T *data, T div, size_t length, size_t shift);
+
+template<typename T>
+__global__  void add_kernel(T *out, T *data, T div, size_t length, size_t shift);
+
+template<typename T>
+__global__  void sub_kernel(T *out, T *data, T div, size_t length, size_t shift);
+
+inline size_t NO_OF_THREADS;
+inline size_t NO_OF_BLOCKS;
 
 template<typename T>
 class Matrix_cu {
@@ -53,15 +61,11 @@ public:
         } else {
             cudaMalloc(&data, lengthCPU * sizeof(T));
         }
-        cudaGetDevice(0);
+        cudaGetDevice(nullptr);
         cudaDeviceProp deviceProp{};
         cudaGetDeviceProperties(&deviceProp, 0);
         NO_OF_THREADS = deviceProp.maxThreadsPerBlock;
         NO_OF_BLOCKS = deviceProp.maxThreadsDim[0];
-        cudaMalloc(&NO_OF_THREADS_GPU, sizeof(size_t));
-        cudaMalloc(&NO_OF_BLOCKS_GPU, sizeof(size_t));
-        cudaMemcpy(NO_OF_THREADS_GPU, &NO_OF_THREADS, sizeof(size_t), cudaMemcpyHostToDevice);
-        cudaMemcpy(NO_OF_BLOCKS_GPU, &NO_OF_BLOCKS, sizeof(size_t), cudaMemcpyHostToDevice);
     }
 
     /**
@@ -102,6 +106,15 @@ public:
     }
 
     /**
+     * Copy constructor
+     * @param other matrix to copy from
+     */
+    Matrix_cu(const Matrix_cu<T> &other) {
+        init(other.rowsCPU, other.colsCPU);
+        set_cu(other.data);
+    }
+
+    /**
      * Constructor for casting.
      * @tparam U Type of other matrix
      * @param other Other matrix
@@ -110,7 +123,19 @@ public:
     explicit Matrix_cu(const Matrix<U> &other) {
         init(other.rows, other.cols);
         Matrix<T> temp(other);
-        cudaMemcpy(data, temp.data, sizeof(T) * temp.length, cudaMemcpyHostToDevice);
+        set(temp.data);
+    }
+
+    /**
+     * Constructor for casting.
+     * @tparam U Type of other matrix
+     * @param other Other matrix
+     */
+    template<class U>
+    explicit Matrix_cu(Matrix_cu<U> &other) {
+        init(other.rowsCPU, other.colsCPU);
+        Matrix<T> temp(other.toCPU());
+        set(temp.data);
     }
 
     /**
@@ -126,6 +151,16 @@ public:
         swap(rowsCPU, other.rowsCPU);
         swap(colsCPU, other.colsCPU);
         swap(lengthCPU, other.lengthCPU);
+    }
+
+    /**
+     * Move constructor
+     * @param other matrix to move from
+     */
+    Matrix_cu(Matrix<T> &&other) {
+        using std::swap;
+        init(other.rows, other.cols);
+        set(other.data);
     }
 
     T sum() {
@@ -166,6 +201,10 @@ public:
 
     void set(size_t row, size_t col, T val) {
         cudaMemcpy(data + (row * colsCPU + col), &val, sizeof(T), cudaMemcpyHostToDevice);
+    }
+
+    void set_cu(T *input) {
+        cudaMemcpy(data, input, lengthCPU * sizeof(T), cudaMemcpyDeviceToDevice);
     }
 
     T get(size_t row, size_t col) {
@@ -237,7 +276,7 @@ public:
      * @param other matrix to move from
      * @return reference to the new matrix
      */
-    Matrix_cu &operator=(Matrix<T> &&other) noexcept {
+    Matrix_cu &operator=(Matrix_cu<T> &&other) noexcept {
         using std::swap;
         swap(rows, other.rows);
         swap(cols, other.cols);
@@ -263,19 +302,35 @@ public:
 #endif
 
     Matrix_cu<T> operator/(T scalar) {
-        return forEach_new([scalar](T val) { return val / scalar; }, *this);
+        Matrix_cu<T> result(rowsCPU, colsCPU);
+        size_t noOfThreads = std::min(NO_OF_THREADS, lengthCPU);
+        size_t noOfBlocks = std::min(NO_OF_BLOCKS, (lengthCPU + noOfThreads - 1) / noOfThreads);
+        div_kernel<<<noOfBlocks, noOfThreads>>>(result.data, data, scalar, lengthCPU, noOfBlocks * noOfThreads);
+        return result;
     }
 
     Matrix_cu<T> operator*(T scalar) {
-        return forEach_new([scalar](T val) { return val * scalar; }, *this);
+        Matrix_cu<T> result(rowsCPU, colsCPU);
+        size_t noOfThreads = std::min(NO_OF_THREADS, lengthCPU);
+        size_t noOfBlocks = std::min(NO_OF_BLOCKS, (lengthCPU + noOfThreads - 1) / noOfThreads);
+        mult_kernel<<<noOfBlocks, noOfThreads>>>(result.data, data, scalar, lengthCPU, noOfBlocks * noOfThreads);
+        return result;
     }
 
     Matrix_cu<T> operator+(T scalar) {
-        return forEach_new([scalar](T val) { return val + scalar; }, *this);
+        Matrix_cu<T> result(rowsCPU, colsCPU);
+        size_t noOfThreads = std::min(NO_OF_THREADS, lengthCPU);
+        size_t noOfBlocks = std::min(NO_OF_BLOCKS, (lengthCPU + noOfThreads - 1) / noOfThreads);
+        add_kernel<<<noOfBlocks, noOfThreads>>>(result.data, data, scalar, lengthCPU, noOfBlocks * noOfThreads);
+        return result;
     }
 
     Matrix_cu<T> operator-(T scalar) {
-        return forEach_new([scalar](T val) { return val - scalar; }, *this);
+        Matrix_cu<T> result(rowsCPU, colsCPU);
+        size_t noOfThreads = std::min(NO_OF_THREADS, lengthCPU);
+        size_t noOfBlocks = std::min(NO_OF_BLOCKS, (lengthCPU + noOfThreads - 1) / noOfThreads);
+        sub_kernel<<<noOfBlocks, noOfThreads>>>(result.data, data, scalar, lengthCPU, noOfBlocks * noOfThreads);
+        return result;
     }
 
     Matrix<T> toCPU() {
@@ -287,20 +342,47 @@ public:
     }
 
     Matrix_cu<T> operator+(Matrix<T> &other) {
-        return Matrix_cu<T>(toCPU() + other);
+        Matrix<T> a = toCPU();
+        return Matrix_cu<T>(a + other);
+    }
+
+    Matrix_cu<T> operator+(Matrix_cu<T> &other) {
+        Matrix<T> a = toCPU();
+        Matrix<T> b = other.toCPU();
+        return Matrix_cu<T>(a + b);
     }
 
     Matrix_cu<T> operator-(Matrix<T> &other) {
-        return Matrix_cu<T>(toCPU() - other);
+        Matrix<T> a = toCPU();
+        return Matrix_cu<T>(a - other);
+    }
+
+    Matrix_cu<T> operator-(Matrix_cu<T> &other) {
+        Matrix<T> a = toCPU();
+        Matrix<T> b = other.toCPU();
+        return Matrix_cu<T>(a - b);
     }
 
     Matrix_cu<T> operator*(Matrix<T> &other) {
-        return matrix_multiply(*this, other);
+        Matrix<T> temp = this->toCPU();
+        return (temp) * (other);
+    }
+
+    Matrix_cu<T> operator*(Matrix_cu<T> &other) {
+        Matrix<T> temp = this->toCPU();
+        Matrix<T> temp1 = other.toCPU();
+        return temp * temp1;
     }
 
     void fillRandom() {
         Matrix<T> temp(rowsCPU, colsCPU);
         temp.fillRandom();
+        set(temp.data);
+    }
+
+    void fillRandom(T min, T max) {
+        Matrix<T> temp(rowsCPU, colsCPU);
+        temp.fillRandom(min, max);
         set(temp.data);
     }
 
@@ -314,62 +396,47 @@ public:
     }
 
     void print() {
-        std::cout << "Matrix: " << rowsCPU << "x" << colsCPU << "\n";
-        T *dataCPU = new T[lengthCPU];
-        cudaMemcpy(dataCPU, data, lengthCPU * sizeof(T), cudaMemcpyDeviceToHost);
-        for (int i = 0; i < rowsCPU; i++) {
-            std::cout << "[";
-            for (int j = 0; j < colsCPU; j++) {
-                std::cout << dataCPU[i * colsCPU + j];
-                if (j < colsCPU - 1) {
-                    std::cout << ", ";
-                }
-            }
-            std::cout << "]";
-            std::cout << "\n";
-        }
-        std::cout << std::endl;
-        delete[] dataCPU;
+        toCPU().print();
     }
 
     ~Matrix_cu() {
         cudaFree(data);
+        cudaFree(rows);
+        cudaFree(cols);
+        cudaFree(length);
     }
 };
 
 template<typename T>
-__global__
-void forEach_internal(const std::function<void(T (T))> &func, T *data, const size_t length, const size_t shift) {
-    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    for (size_t i = idx; i < length; i += shift) {
-        data[i] = func(data[i]);
+__global__  void div_kernel(T *out, T *data, T div, size_t length, size_t shift) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    for (; i < length; i += shift) {
+        out[i] = data[i] / div;
     }
 }
 
 template<typename T>
-__global__
-void
-forEach_new_internal(const std::function<void(T (T))> &func, T *out, T *data, const size_t length, const size_t shift) {
-    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    for (size_t i = idx; i < length; i += shift) {
-        out[i] = func(data[i]);
+__global__  void mult_kernel(T *out, T *data, T div, size_t length, size_t shift) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    for (; i < length; i += shift) {
+        out[i] = data[i] * div;
     }
 }
 
 template<typename T>
-void forEach(const std::function<void(T (T))> &func, Matrix_cu<T> &input) {
-    int noOfThreads = std::min(NO_OF_THREADS, input.lengthCPU);
-    int noOfBlocks = std::min(NO_OF_BLOCKS, (input.lengthCPU + noOfThreads - 1) / noOfThreads);
-    forEach_internal<<<noOfBlocks, noOfThreads>>>(func, input.data, input.lengthCPU, input.noOfThreads);
+__global__  void add_kernel(T *out, T *data, T div, size_t length, size_t shift) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    for (; i < length; i += shift) {
+        out[i] = data[i] + div;
+    }
 }
 
 template<typename T>
-Matrix_cu<T> forEach_new(const std::function<void(T (T))> &func, Matrix_cu<T> &input) {
-    Matrix_cu<T> result(input.rowsCPU, input.colsCPU);
-    int noOfThreads = std::min(NO_OF_THREADS, input.lengthCPU);
-    int noOfBlocks = std::min(NO_OF_BLOCKS, (input.lengthCPU + noOfThreads - 1) / noOfThreads);
-    forEach_new_internal<<<noOfBlocks, noOfThreads>>>(func, result.data, input.data, input.lengthCPU,
-                                                      input.noOfThreads);
+__global__  void sub_kernel(T *out, T *data, T div, size_t length, size_t shift) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    for (; i < length; i += shift) {
+        out[i] = data[i] - div;
+    }
 }
 
 template<typename T, typename U, typename V>
@@ -401,13 +468,6 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
                   << " x " << b.colsCPU << " respectively.";
         exit(-69);
     }
-
-    /*
-     * size_t NO_OF_THREADS{};
-     * size_t NO_OF_BLOCKS{};
-     */
-
-    std::cout << "NO_OF_THREADS " << NO_OF_THREADS << " NO_OF_BLOCKS " << NO_OF_BLOCKS << std::endl;
 
     Matrix_cu<decltype(T{} * U{})> result(a.rowsCPU, b.colsCPU);
     const uint32_t shiftDown = (result.rowsCPU - 1) / (NO_OF_BLOCKS);
@@ -446,6 +506,11 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     }
 
     return result;
+}
+
+template<typename T, typename U>
+auto matmult(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
+    return matrix_multiply(a, b);
 }
 
 #endif //BACKPROPAGATION_MATRIX_CUH
