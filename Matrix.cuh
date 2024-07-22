@@ -27,6 +27,9 @@ __global__  void add_kernel(T *out, T *data, T div, size_t length, size_t shift)
 template<typename T>
 __global__  void sub_kernel(T *out, T *data, T div, size_t length, size_t shift);
 
+template<typename T>
+__global__ void t_kernel(T *__restrict__ out, T *__restrict__ data, size_t rows, size_t cols);
+
 inline size_t NO_OF_THREADS;
 inline size_t NO_OF_BLOCKS;
 
@@ -387,8 +390,11 @@ public:
     }
 
     Matrix_cu<T> transpose() {
-        Matrix<T> temp = toCPU().transpose();
-        return Matrix_cu<T>(temp);
+        Matrix_cu<T> temp(*this);
+        size_t no_of_threads = std::min(NO_OF_THREADS, this->colsCPU);
+        size_t no_of_blocks = std::min(NO_OF_BLOCKS, this->rowsCPU);
+        t_kernel<<<no_of_blocks, no_of_threads>>>(temp.data, data, rowsCPU, colsCPU);
+        return temp;
     }
 
     Matrix_cu<T> t() {
@@ -436,6 +442,16 @@ __global__  void sub_kernel(T *out, T *data, T div, size_t length, size_t shift)
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
     for (; i < length; i += shift) {
         out[i] = data[i] - div;
+    }
+}
+
+template<typename T>
+__global__ void t_kernel(T *__restrict__ out, T *__restrict__ data, size_t rows, size_t cols) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    for (; i < rows * cols; i += blockDim.x * gridDim.x) {
+        const size_t row = i / cols;
+        const size_t col = i % cols;
+        out[col * rows + row] = data[i];
     }
 }
 
