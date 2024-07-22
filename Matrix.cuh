@@ -445,12 +445,8 @@ void
 matrix_multiply_internal_cu(T *__restrict__ a, uint32_t aCols,
                             U *__restrict__ b, uint32_t bCols,
                             V *__restrict__ c,
-                            uint16_t block = 0, uint16_t threads = 0,
-                            uint16_t shiftDown = 0, uint16_t shiftRight = 0) {
-    decltype(T{} * U{}) ans = 0;      // auto may not give you the right type here
-
-    shiftDown *= (block);
-    shiftRight *= (threads);
+                            uint32_t shiftDown = 0, uint32_t shiftRight = 0) {
+    V ans{};      // auto may not give you the right type here
     const uint32_t x = blockIdx.x + shiftDown;
     const uint32_t y = threadIdx.x + shiftRight;
 
@@ -483,8 +479,8 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
     cudaFuncSetCacheConfig(matrix_multiply_internal_cu<T, U, decltype(T{} * U{})>, cudaFuncCachePreferL1);
 
     size_t streamIdx = 0;
-    for (uint16_t i = 0; i <= shiftDown; i++) {
-        for (uint16_t j = 0; j <= shiftRight; j++) {
+    for (uint32_t i = 0; i <= shiftDown; i++) {
+        for (uint32_t j = 0; j <= shiftRight; j++) {
             uint32_t blockSize = std::min(NO_OF_BLOCKS, a.rowsCPU - i * NO_OF_BLOCKS);
             uint32_t noOfThreads = std::min(NO_OF_THREADS, b.colsCPU - j * NO_OF_THREADS);
             noOfThreads = max(1, noOfThreads);
@@ -493,8 +489,7 @@ auto matrix_multiply(const Matrix_cu<T> &a, const Matrix_cu<U> &b) {
                     a.data, a.colsCPU,
                     b.data, b.colsCPU,
                     result.data,
-                    NO_OF_BLOCKS, NO_OF_THREADS,
-                    i, j);
+                    i * NO_OF_BLOCKS, j * NO_OF_THREADS);
 
             streamIdx++;
         }

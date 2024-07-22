@@ -28,7 +28,6 @@ int main(int argc, char *argv[]) {
 #else
 
 #include <iostream>
-#include "Matrix.h"
 #include "Matrix.cuh"
 #include "CSV.h"
 #include "backPropagation.cuh"

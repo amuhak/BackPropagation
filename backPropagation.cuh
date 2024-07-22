@@ -12,10 +12,8 @@
 #include <cmath>
 #include <vector>
 #include <utility>
-#include "cuda_runtime_api.h"
 #include "device_launch_parameters.h"
 #include "device_types.h"
-#include "driver_types.h"
 
 constexpr long double RAND_RANGE_START = -0.5;
 constexpr long double RAND_RANGE_END = 0.5;
@@ -25,6 +23,14 @@ __global__ void relu_kernel(T *data, size_t length, size_t shift) {
     size_t i = blockIdx.x * blockDim.x + threadIdx.x;
     for (; i < length; i += shift) {
         data[i] = static_cast<T>(0) < data[i] ? data[i] : static_cast<T>(0);
+    }
+}
+
+template<typename T>
+__global__ void relu_derivative_kernel(T *data, size_t length, size_t shift) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    for (; i < length; i += shift) {
+        data[i] = data[i] > 0 ? 1 : 0;
     }
 }
 
@@ -55,14 +61,6 @@ public:
             weight.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             bias.fillRandom(RAND_RANGE_START, RAND_RANGE_END);
             weightsAndBiases.emplace_back(weight, bias);
-            /*
-           Matrix_cu<double> W1 = CsvToMatrix<double>("./Data/W1.csv");
-           Matrix_cu<double> b1 = CsvToMatrix<double>("./Data/b1.csv");
-           Matrix_cu<double> W2 = CsvToMatrix<double>("./Data/W2.csv");
-           Matrix_cu<double> b2 = CsvToMatrix<double>("./Data/b2.csv");
-            weightsAndBiases.emplace_back(W1, b1);
-            weightsAndBiases.emplace_back(W2, b2);
-             */
             Matrix_cu<T> Z{};
             Matrix_cu<T> A{};  // Filling up activations with objects of Matrix class so that they can be used later
             activations.emplace_back(Z, A);
@@ -90,12 +88,10 @@ public:
     }
 
     Matrix_cu<T> relu_derivative(Matrix_cu<T> &m) {
-        Matrix<T> result = m.toCPU();
-        auto *data = result.data;
-        for (size_t i = 0; i < result.length; i++) {
-            data[i] = data[i] > 0 ? 1 : 0;
-        }
-        return result;
+        Matrix_cu<T> ans(m);
+        auto *data = ans.data;
+        relu_derivative_kernel<<<NO_OF_THREADS, NO_OF_BLOCKS>>>(data, ans.lengthCPU, NO_OF_THREADS * NO_OF_BLOCKS);
+        return ans;
     }
 
     Matrix_cu<T> softmax(Matrix_cu<T> &m) {
