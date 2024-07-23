@@ -14,7 +14,6 @@
 #include <queue>
 #include <vector>
 #include <chrono>
-#include <sys/types.h>
 
 class ThreadPool {
 public:

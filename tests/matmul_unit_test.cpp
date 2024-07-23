@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <sys/types.h>
 #include <chrono>
 #include <iomanip>
 #include "../RandomT.h"

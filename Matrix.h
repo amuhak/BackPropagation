@@ -3,6 +3,7 @@
 #define BACKPROPAGATION_MATRIX_H
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
 #include <iostream>

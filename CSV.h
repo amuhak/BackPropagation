@@ -3,16 +3,16 @@
 
 #include "Matrix.h"
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <fstream>
 #include <ostream>
 #include <stdexcept>
-#include <sys/types.h>
 #include <vector>
 #include <cstdlib>
 
 template<typename T>
-Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol = 0, int noRows = -1,
+Matrix<T> CsvToMatrix(const std::string &filename, uint32_t skipRow = 0, uint32_t skipCol = 0, int32_t noRows = -1,
                       const char delimiter = ',') {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -35,7 +35,7 @@ Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol 
         std::vector<T> row;
         const char *linePtr = line.c_str();
         const char *endPtr = linePtr + line.size();
-        int temp = skipCol;
+        uint32_t temp = skipCol;
 
         while (linePtr < endPtr) {
             const char *nextDelim = std::find(linePtr, endPtr, delimiter);
@@ -68,7 +68,8 @@ Matrix<T> CsvToMatrix(const std::string &filename, int skipRow = 0, int skipCol 
 }
 
 template<typename T>
-void MatrixToCsv(const std::string &filename, const Matrix<T> &matrix, int precision = 6, const char &delimiter = ',') {
+void MatrixToCsv(const std::string &filename, const Matrix<T> &matrix, const uint32_t precision = 6,
+                 const char &delimiter = ',') {
     std::ofstream file(filename);
     file.precision(precision);
     if (!file.is_open()) {
