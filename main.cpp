@@ -57,7 +57,7 @@ int main() {
     std::cout << std::setprecision(10);
 
     double const alpha = 0.10;
-    int const iterations = 100;
+    int const iterations = 500;
 
     auto start = std::chrono::high_resolution_clock::now();
 
