@@ -66,6 +66,14 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C Debug
 
+    - name: Install libtinfo5 dependency workaround
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libtinfo5 || {
+          sudo apt-get install -y libtinfo6
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+        }
+        
     - name: NVCC install
       run: |
         wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
