@@ -390,9 +390,9 @@ public:
     }
 
     Matrix_cu<T> transpose() {
-        Matrix_cu<T> temp(*this);
-        size_t no_of_threads = std::min(NO_OF_THREADS, this->colsCPU);
-        size_t no_of_blocks = std::min(NO_OF_BLOCKS, this->rowsCPU);
+        Matrix_cu<T> temp(colsCPU, rowsCPU);
+        size_t no_of_threads = std::min(NO_OF_THREADS, temp.colsCPU);
+        size_t no_of_blocks = std::min(NO_OF_BLOCKS, temp.rowsCPU);
         t_kernel<<<no_of_blocks, no_of_threads>>>(temp.data, data, rowsCPU, colsCPU);
         return temp;
     }
