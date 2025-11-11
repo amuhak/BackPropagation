@@ -66,23 +66,17 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C Debug
 
-    - name: Install libtinfo5 dependency workaround
+    - name: NVCC install (Latest)
       run: |
+        # Install the keyring package that manages NVIDIA's APT repositories
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        sudo dpkg -i cuda-keyring_1.1-1_all.deb
         sudo apt-get update
-        sudo apt-get install -y libtinfo5 || {
-          sudo apt-get install -y libtinfo6
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
-        }
         
-    - name: NVCC install
-      run: |
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
-        sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
-        wget --no-verbose https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda-repo-ubuntu2204-12-4-local_12.4.1-550.54.15-1_amd64.deb
-        sudo dpkg -i cuda-repo-ubuntu2204-12-4-local_12.4.1-550.54.15-1_amd64.deb
-        sudo cp /var/cuda-repo-ubuntu2204-12-4-local/cuda-*-keyring.gpg /usr/share/keyrings/
-        sudo apt-get update
-        sudo apt-get -y install cuda-toolkit-12-4
+        # The 'cuda-toolkit' package always points to the single latest version
+        sudo apt-get -y install cuda-toolkit
+        
+        # Verify
         /usr/local/cuda/bin/nvcc --version
 
     - name: Configure CMake with GPU Release
